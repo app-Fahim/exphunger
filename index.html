@@ -556,10 +556,11 @@ $('resetBtn').onclick=async()=>{
   // Delete only rows owned by the authenticated user, then verify that none remain.
   let remaining=[];
   for(let attempt=0;attempt<3;attempt++){
-   const {error:deleteError}=await cloudClient.from('products').delete().eq('owner_id',userId);
-   if(deleteError)throw deleteError;
+   const {data:deletedRows,error:deleteError}=await cloudClient.from('products').delete().eq('owner_id',userId).select('id');
+   if(deleteError)throw new Error('Supabase delete permission failed: '+deleteError.message);
    remaining=await fetchCloudProducts();
    if(remaining.length===0)break;
+   if((deletedRows||[]).length===0 && remaining.length>0)throw new Error('Supabase RLS denied DELETE or the Delete policy is missing. No rows were confirmed deleted. Open Supabase SQL Editor and run the safe owner-only DELETE policy SQL provided with this app.');
    // If any rows remain, retry by explicit IDs; this also avoids relying on a single bulk request.
    for(let i=0;i<remaining.length;i+=200){const ids=remaining.slice(i,i+200).map(row=>String(row.id));const {error}=await cloudClient.from('products').delete().eq('owner_id',userId).in('id',ids);if(error)throw error;}
   }
@@ -570,7 +571,7 @@ $('resetBtn').onclick=async()=>{
   resetForm();render();
   setCloudStatus('Connected · this account’s Supabase products cleared and verified.');
   toast('Password verified. This user’s Supabase data has been deleted and verified.');
- }catch(err){console.error(err);toast('Clear Data did not complete. Check the password, internet connection, and Supabase delete policy.');setCloudStatus('Clear Data failed: '+(err.message||'check password and connection'));}
+ }catch(err){console.error(err);const detail=String(err&&err.message||'Unknown error');toast('Clear Data failed: '+detail);setCloudStatus('Clear Data failed: '+detail);}
  finally{cloudClearing=false;btn.disabled=false;btn.textContent=oldText;}
 };
 // Bottom navigation opens each tool in its own full-screen page while preserving the original elements and event handlers.
