@@ -855,13 +855,23 @@ async function restoreCloudSafely(){
  if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
  const accountId=cloudSession.user.id;
  switchUserStorage(accountId);
+ // Preserve this account's cached products before reading the cloud. A previous failed
+ // sync may have left products only in local storage; replacing the cache with an empty
+ // cloud result would make those products appear to vanish after logout/login.
+ const localRows=Array.isArray(products)?products.map(p=>({...p})):[];
  const remoteRows=await fetchCloudProducts();
- // Fetch succeeded: replace only this account's local cache with this account's cloud rows.
- products=remoteRows.map(fromCloud);
+ const merged=new Map(remoteRows.map(row=>{const p=fromCloud(row);return [String(p.id),p]}));
+ // Local rows win for matching IDs so pending edits are not discarded; missing IDs
+ // are retained and will be uploaded to this authenticated user's own owner_id.
+ for(const p of localRows){merged.set(String(p.id),p)}
+ products=Array.from(merged.values());
  safeCacheProducts();
  render();
- if(remoteRows.length){setCloudStatus(`Connected · loaded ${remoteRows.length} product(s) for this account.`);}
- else {setCloudStatus("Connected. This account has no cloud products yet. Other accounts' products were not loaded.");}
+ // Reconcile local-only/pending rows to cloud after the authenticated read succeeded.
+ // If this fails, keep the local cache and show the actual error instead of dropping data.
+ await syncProducts();
+ if(remoteRows.length || localRows.length){setCloudStatus(`Connected · ${products.length} product(s) available for this account; sync completed.`);}
+ else {setCloudStatus("Connected. This account has no cloud or cached products yet. Other accounts' products were not loaded.");}
 }
 
 async function updateAuthUI(){
