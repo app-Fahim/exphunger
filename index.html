@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#061a31" id="appThemeColor">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stock Tracker">
+<title>All Items Stock & Expiry Tracker</title>
+<style>
+:root{--bg:#06172b;--panel:#0b2542;--panel2:#103151;--line:#1b4569;--text:#f2f7ff;--muted:#9db5d1;--teal:#00c7b2;--green:#08b981;--amber:#f59e0b;--red:#f04452;--blue:#1687e8}
+*{box-sizing:border-box}body.auth-locked > header,body.auth-locked > main,body.auth-locked > nav{visibility:hidden!important;pointer-events:none!important}body{margin:0;background:radial-gradient(ellipse at top right,#103d60 0,transparent 38%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding-bottom:82px}
+header{padding:18px 16px 16px;background:linear-gradient(120deg,#061a31,#0c3152);border-bottom:1px solid #174366;position:sticky;top:0;z-index:5}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.brand{display:flex;align-items:center;gap:12px;min-width:0}.header-logout{flex:0 0 auto;padding:9px 11px;font-size:12px;white-space:nowrap}.cookie{font-size:36px;background:#123e60;border:1px solid #286286;border-radius:16px;width:56px;height:56px;display:grid;place-items:center}.brand h1{font-size:19px;line-height:1.2;margin:0}.brand p{color:#a7c3df;margin:5px 0 0;font-size:12px}.wrap{max-width:920px;margin:auto;padding:16px}
+.section-title{font-size:16px;margin:20px 0 11px}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{cursor:pointer;transition:transform .15s,filter .15s}.stat:active{transform:scale(.98);filter:brightness(1.12)}.stat{border-radius:18px;padding:15px;min-height:112px;border:1px solid #ffffff18;box-shadow:0 8px 24px #0002}.stat .label{font-size:12px;opacity:.95}.stat strong{display:block;font-size:28px;line-height:1.25;margin:7px 0 3px}.stat small{font-size:11px;opacity:.9}.s-blue{background:linear-gradient(140deg,#0874bd,#07508a)}.s-green{background:linear-gradient(140deg,#079d77,#05664e)}.s-amber{background:linear-gradient(140deg,#df8a08,#9d5000)}.s-red{background:linear-gradient(140deg,#e33e4c,#9e1e31)}.s-slate{background:linear-gradient(140deg,#365778,#233e5c)}
+.panel{background:linear-gradient(145deg,#0c2948,#081f38);border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:14px}.panel h2{font-size:16px;margin:0 0 12px}.searchrow{display:flex;gap:8px}.searchrow input{flex:1;min-width:0}.input,select,textarea{width:100%;border:1px solid #315775;background:#081d34;color:#f2f7ff;border-radius:12px;padding:12px;font:inherit;font-size:14px;outline:none}.input:focus,select:focus{border-color:var(--teal)}button{border:0;border-radius:12px;padding:12px 14px;background:var(--teal);color:#042c34;font-weight:750;font-size:14px;cursor:pointer}.btn-secondary{background:#173d5c;color:#e8f4ff;border:1px solid #326080}.btn-red{background:#a92537;color:white}.btn-green{background:#087d5d;color:white}.btn-small{padding:8px 10px;font-size:12px}.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.product-list{display:grid;gap:10px;margin-top:12px}.product{background:linear-gradient(120deg,#0d2a49,#0a213b);border:1px solid #174468;border-radius:17px;padding:13px;display:grid;grid-template-columns:1fr auto;gap:8px}.pname{font-weight:750;font-size:15px}.meta{font-size:12px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.pill{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:750}.ok{background:#075e4d;color:#6ff5ce}.near{background:#744600;color:#ffda87}.expired{background:#752333;color:#ffadb4}.out{background:#344c67;color:#d8e8fb}.qty{align-self:start;text-align:right}.qty strong{display:block;font-size:22px}.qty small{font-size:11px;color:var(--muted)}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;grid-column:1/-1}.actions button{padding:8px 10px;font-size:12px}.empty{text-align:center;color:var(--muted);padding:25px 10px}.hidden{display:none!important}.home-only-hidden{display:none!important}#navPage .home-only-hidden{display:block!important}#navPage .section-title.home-only-hidden{display:block!important}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;font-size:12px;color:#b8cde2;margin:0 0 6px}.field.full{grid-column:1/-1}.form-actions{display:flex;gap:8px;margin-top:13px}.form-actions button{flex:1}.notice{color:var(--muted);font-size:12px;line-height:1.5}.bottom{position:fixed;bottom:0;left:0;right:0;background:#061a30f5;border-top:1px solid #214664;display:flex;justify-content:space-around;padding:9px 4px calc(9px + env(safe-area-inset-bottom));z-index:10}.bottom button{background:transparent;color:#a9c2dc;padding:6px 2px;font-size:10px;display:grid;gap:3px;justify-items:center;min-width:0;flex:1}.bottom button span{font-size:20px}.bottom button.active{color:#00e0ce}.toast{position:fixed;bottom:85px;left:50%;transform:translateX(-50%);background:#e9fff9;color:#06483c;padding:10px 15px;border-radius:12px;box-shadow:0 8px 25px #0005;z-index:20;font-size:13px;max-width:90%;text-align:center}
+@media(min-width:650px){.stats{grid-template-columns:repeat(5,minmax(0,1fr))}.stat{min-height:125px}.stat strong{font-size:30px}.product{grid-template-columns:1fr auto}.filters{grid-template-columns:repeat(4,1fr)}}
+
+.auth-overlay{position:fixed;inset:0;z-index:100;background:rgba(3,13,27,.97);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
+.auth-card{width:100%;max-width:430px;background:linear-gradient(145deg,#0c2948,#08182c);border:1px solid #286080;border-radius:22px;padding:22px;box-shadow:0 20px 70px #0008}
+.auth-card h2{margin:0 0 8px;font-size:21px}.auth-card p{color:#aac2dc;font-size:13px;line-height:1.5}
+.auth-card .field{margin-top:12px}.auth-card .auth-buttons{display:grid;gap:9px;margin-top:16px}.auth-card button{width:100%}
+.auth-card .auth-link{background:transparent;color:#67e8dc;border:0;padding:10px}
+.auth-warning{font-size:11px!important;color:#f5cf83!important}
+.admin-badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#075e4d;color:#6ff5ce;font-size:11px;font-weight:700}
+
+
+/* Premium midnight glass theme */
+:root{
+ --bg:#071326;--panel:#0c203b;--panel2:#122f50;--line:#244b72;
+ --text:#f5f8ff;--muted:#a9bfd9;--teal:#25e0cb;--green:#21c995;
+ --amber:#ffb547;--red:#ff647c;--blue:#36a6ff;
+}
+body{
+ background:
+  radial-gradient(ellipse at 8% 0%,rgba(35,125,211,.25),transparent 34%),
+  radial-gradient(ellipse at 100% 22%,rgba(0,224,203,.13),transparent 30%),
+  linear-gradient(160deg,#061226 0%,#0a1e37 52%,#071326 100%);
+ background-attachment:fixed;
+}
+header{
+ background:linear-gradient(115deg,rgba(7,23,45,.97),rgba(15,53,83,.94) 58%,rgba(11,44,67,.96));
+ border-bottom:1px solid rgba(91,180,230,.28);
+ box-shadow:0 8px 28px rgba(0,0,0,.2);
+ backdrop-filter:blur(16px);
+}
+.cookie{
+ background:linear-gradient(145deg,#164c70,#0b2949);
+ border:1px solid rgba(101,205,255,.42);
+ box-shadow:0 0 24px rgba(37,177,255,.13),inset 0 1px 0 #ffffff20;
+}
+.panel{
+ background:linear-gradient(145deg,rgba(16,48,79,.92),rgba(8,28,51,.96));
+ border:1px solid rgba(82,157,208,.28);
+ box-shadow:0 12px 30px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.stat{
+ border:1px solid rgba(255,255,255,.16);
+ box-shadow:0 10px 25px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.12);
+}
+.s-blue{background:linear-gradient(135deg,#1689d7,#07528e 80%)}
+.s-green{background:linear-gradient(135deg,#0bbd91,#056b58 85%)}
+.s-amber{background:linear-gradient(135deg,#ffad25,#a84d04 90%)}
+.s-red{background:linear-gradient(135deg,#ff5269,#a91e3c 90%)}
+.s-slate{background:linear-gradient(135deg,#466b91,#233d5c 90%)}
+.product{
+ background:linear-gradient(120deg,rgba(17,53,86,.96),rgba(8,30,53,.98));
+ border:1px solid rgba(74,151,205,.3);
+ box-shadow:0 6px 18px rgba(0,0,0,.12);
+}
+.input,select,textarea{
+ background:rgba(5,23,43,.82);
+ border:1px solid #315d80;
+ box-shadow:inset 0 1px 3px rgba(0,0,0,.15);
+}
+.input:focus,select:focus,textarea:focus{
+ border-color:var(--teal);
+ box-shadow:0 0 0 3px rgba(37,224,203,.12);
+}
+button{
+ background:linear-gradient(135deg,#27e1cb,#08bfae);
+ box-shadow:0 4px 12px rgba(0,199,178,.12);
+ transition:transform .15s,filter .15s,box-shadow .15s;
+}
+button:active{transform:translateY(1px) scale(.985);filter:brightness(1.08)}
+.btn-secondary{
+ background:linear-gradient(135deg,#1c496b,#12334f);
+ border:1px solid #3b6c91;
+ box-shadow:inset 0 1px 0 #ffffff0b;
+}
+.bottom{
+ background:rgba(5,20,39,.96);
+ border-top:1px solid rgba(79,151,199,.35);
+ box-shadow:0 -8px 28px rgba(0,0,0,.18);
+ backdrop-filter:blur(18px);
+}
+.bottom button.active{
+ color:#36f3df;
+ text-shadow:0 0 14px rgba(37,224,203,.3);
+}
+.pill{box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+@media(min-width:700px){
+ .wrap{padding:22px}
+ .panel{padding:20px;border-radius:22px}
+ .stat{border-radius:22px;padding:20px}
+}
+
+
+/* LUXURY AURORA THEME */
+:root{--bg:#050d1b;--panel:#0b1c32;--panel2:#112b47;--line:#2b4e70;--text:#f7f9ff;--muted:#afc2dc;--teal:#5df4df;--green:#37e0a1;--amber:#ffc56a;--red:#ff7089;--blue:#63b8ff}
+body{background:radial-gradient(ellipse at 12% -8%,rgba(61,121,255,.25),transparent 34%),radial-gradient(ellipse at 100% 18%,rgba(0,242,209,.15),transparent 29%),radial-gradient(ellipse at 55% 110%,rgba(130,64,255,.12),transparent 35%),linear-gradient(150deg,#050d1b,#081a30 55%,#050d1b);background-attachment:fixed}
+header{background:linear-gradient(115deg,rgba(5,15,32,.97),rgba(13,43,72,.95),rgba(10,34,57,.96));border-bottom:1px solid rgba(104,190,255,.3);box-shadow:0 10px 35px #0004;backdrop-filter:blur(18px)}
+.cookie{background:linear-gradient(145deg,#1c668b,#12385f 58%,#19305d);border:1px solid #73d8f588;box-shadow:0 0 28px #2ab8ff24,inset 0 1px #ffffff30}
+.brand h1{letter-spacing:.2px;text-shadow:0 2px 18px #60c8ff22}.brand p{color:#b3cce8}
+.panel{background:linear-gradient(145deg,rgba(17,43,71,.94),rgba(7,24,44,.97));border:1px solid rgba(112,174,224,.25);box-shadow:0 14px 36px #0003,inset 0 1px #ffffff08;backdrop-filter:blur(12px)}
+.section-title{letter-spacing:.25px;text-shadow:0 2px 15px #6abaff18}
+.stat{border:1px solid #ffffff28;box-shadow:0 12px 28px #0003,inset 0 1px #ffffff30;position:relative;overflow:hidden}
+.stat:after{content:"";position:absolute;top:-55%;right:-25%;width:100px;height:170%;transform:rotate(28deg);background:linear-gradient(90deg,transparent,#ffffff13,transparent);pointer-events:none}
+.s-blue{background:linear-gradient(135deg,#1d9bf0,#1559b7 65%,#173f84)}.s-green{background:linear-gradient(135deg,#23d6a0,#07886e 70%,#075b59)}.s-amber{background:linear-gradient(135deg,#ffc15a,#d47717 68%,#934716)}.s-red{background:linear-gradient(135deg,#ff7189,#d83c62 65%,#92264b)}.s-slate{background:linear-gradient(135deg,#587ba6,#344f79 65%,#233c5e)}
+.product{background:linear-gradient(120deg,rgba(17,46,75,.98),rgba(8,26,47,.98));border:1px solid rgba(94,163,220,.28);box-shadow:0 8px 22px #0002,inset 0 1px #ffffff07;transition:transform .18s,border-color .18s}.product:active{transform:scale(.993);border-color:#55dcd0}
+.input,select,textarea{background:rgba(4,17,33,.86);border:1px solid #365b7d;box-shadow:inset 0 2px 5px #0002}.input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px #5df4df1c,0 0 20px #5df4df0b}
+button{background:linear-gradient(135deg,#76f7e6,#29d9c7 55%,#11b8b1);color:#04262d;box-shadow:0 5px 16px #0bc9bb20;transition:transform .16s,filter .16s,box-shadow .16s}button:hover{filter:brightness(1.06);box-shadow:0 7px 22px #0bc9bb30}button:active{transform:translateY(1px) scale(.985)}.btn-secondary{background:linear-gradient(135deg,#214c70,#153653);color:#f1f7ff;border:1px solid #426b8e;box-shadow:inset 0 1px #ffffff0d}.btn-red{background:linear-gradient(135deg,#ff7189,#cb294f);color:white}.btn-green{background:linear-gradient(135deg,#35e2ab,#0b9878);color:#032b24}
+.pill{border:1px solid #ffffff12;box-shadow:inset 0 1px #ffffff0c}.ok{background:#075e4dcc;color:#82ffda}.near{background:#80500acc;color:#ffe0a0}.expired{background:#82253bcc;color:#ffb7c1}.out{background:#3b5575cc;color:#e3efff}
+.bottom{background:rgba(4,14,29,.96);border-top:1px solid rgba(103,171,224,.3);box-shadow:0 -10px 32px #0004;backdrop-filter:blur(20px)}.bottom button{text-shadow:none}.bottom button.active{color:#6ff8e6;text-shadow:0 0 15px #4af3dd55}.bottom button.active span{filter:drop-shadow(0 0 6px #4af3dd55)}
+.auth-overlay{background:radial-gradient(ellipse at 50% 15%,#143c5a 0,transparent 45%),rgba(3,10,22,.97);backdrop-filter:blur(12px)}.auth-card{background:linear-gradient(145deg,#112c49,#07172b);border:1px solid #4b8ab166;box-shadow:0 25px 90px #0008,inset 0 1px #ffffff0d}
+.toast{background:linear-gradient(135deg,#eafffb,#c9fff5);box-shadow:0 10px 32px #0006,0 0 22px #55f4db22}
+@media(min-width:700px){.wrap{padding:24px}.panel{padding:22px;border-radius:22px}.stat{border-radius:22px;padding:20px}}
+@media(prefers-reduced-motion:no-preference){.panel,.stat,.product{animation:soft-rise .35s ease-out both}@keyframes soft-rise{from{opacity:.88;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}}
+
+
+/* UPCOMING EXPIRY HIGHLIGHT: high-visibility warning in both themes */
+.product.expiring-month{
+  border:3px solid #ff9f1c !important;
+  background:linear-gradient(120deg,rgba(255,181,71,.24),rgba(26,35,49,.98)) !important;
+  box-shadow:0 0 0 2px rgba(255,159,28,.22),0 8px 24px rgba(255,153,0,.22) !important;
+}
+body.light-theme .product.expiring-month{background:linear-gradient(120deg,#fff0c2,#fffaf0) !important;border-color:#e88700 !important;box-shadow:0 0 0 2px #ffbd5933,0 8px 20px #d9770626 !important}
+.product.expiring-month .expiry-month-text{color:#ffca70 !important}
+body.light-theme .product.expiring-month .expiry-month-text{color:#8a4b00 !important}
+.expiring-month-pill{
+  background:linear-gradient(135deg,#ffd36b,#ff9f43) !important;
+  color:#402000 !important;
+  border:1px solid #ffe2a0 !important;
+  font-weight:800 !important;
+}
+.expiry-month-text{color:#ffd58b !important;font-weight:700}
+
+
+/* Theme selector and install controls */
+.header-tools{display:flex;align-items:center;gap:7px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.header-tools button{padding:9px 10px;font-size:12px;white-space:nowrap}
+body.light-theme{--bg:#f1f5f9;--panel:#ffffff;--panel2:#e8f0f8;--line:#cbd8e6;--text:#17283b;--muted:#52677e;--teal:#087f8c;--green:#087f5b;--amber:#9a5b00;--red:#b42336;--blue:#1265ad;background:linear-gradient(150deg,#f8fbff,#e8f1f8 60%,#f6f9fc);color:var(--text)}
+body.light-theme header{background:linear-gradient(115deg,#fff,#e7f2fb);border-bottom:1px solid #c9d9e8;box-shadow:0 5px 20px #1c355015}
+body.light-theme .brand p{color:#52677e}
+body.light-theme .cookie{background:#dbeafe;border-color:#b5cde8}
+body.light-theme .panel,body.light-theme .auth-card{background:#fff;border-color:#cbd8e6;box-shadow:0 8px 24px #17324b0b}
+body.light-theme .input,body.light-theme select,body.light-theme textarea{background:#fff;color:#17283b;border-color:#b8c8d9}
+body.light-theme .btn-secondary{background:#e4edf6;color:#203a54;border-color:#c0d0df}
+body.light-theme .product{background:linear-gradient(120deg,#fff,#f1f6fb);border-color:#d1deea}
+body.light-theme .bottom{background:#ffffffed;border-top-color:#cbd8e6;box-shadow:0 -5px 18px #17324b0c}
+body.light-theme .bottom button{color:#52677e}body.light-theme .bottom button.active{color:#087f8c}
+body.light-theme .auth-overlay{background:rgba(235,243,250,.97)}
+body.light-theme .auth-card h2{color:#17283b}body.light-theme .auth-card p{color:#52677e}body.light-theme .auth-card .auth-link{color:#087f8c}
+body.light-theme .field label{color:#435a70}
+body.light-theme .near{background:#fff0cc;color:#754600}body.light-theme .expired{background:#ffe1e5;color:#8f1d2b}body.light-theme .ok{background:#d8f8eb;color:#075d43}
+body.light-theme .product.expiring-month{background:linear-gradient(120deg,#fff7e5,#fff) !important}
+/* FIX: Pick List rows used hard-coded dark backgrounds; enforce readable contrast in Light Mode. */
+body.light-theme #pickListSelectedResults > div,
+body.light-theme #pickListResults > label {
+  background: linear-gradient(120deg,#ffffff,#f3f7fb) !important;
+  color: #17283b !important;
+  border-color: #cbd8e6 !important;
+}
+body.light-theme #pickListSelectedResults strong,
+body.light-theme #pickListResults strong { color: #17283b !important; }
+body.light-theme #pickListSelectedResults small,
+body.light-theme #pickListResults small { color: #52677e !important; }
+body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !important; }
+@media(max-width:480px){.header-tools{gap:5px}.header-tools button{padding:8px;font-size:11px}.brand{gap:8px}.cookie{width:43px;height:43px;font-size:27px;border-radius:12px}.brand h1{font-size:15px}.brand p{font-size:10px}.header-row{align-items:flex-start}}
+</style>
+</head>
+<body class="auth-locked">
+<header><div class="header-row"><div class="brand"><div class="cookie">🍪</div><div><h1>All Items Stock &<br>Expiry Tracker</h1><p>Track • Manage • Never Waste</p></div></div><div class="header-tools"><button id="themeToggle" class="btn-secondary" type="button" aria-label="Switch theme">☀️ Light</button><button id="installApp" class="btn-green hidden" type="button">⬇ Install App</button><button id="headerLogout" class="btn-red header-logout hidden" type="button">Log Out</button></div></div></header>
+
+<div class="auth-overlay" id="authOverlay">
+  <section class="auth-card">
+    <div style="font-size:38px">☁️</div>
+    <h2>Cloud Sync Login</h2>
+    <p>Configure Supabase once. Log in with the same account on your phone and PC to access the same product data.</p>
+    <div id="connectionSettings">
+      <div class="field"><label for="sbUrl">Supabase Project URL</label><input class="input" id="sbUrl" placeholder="https://your-project.supabase.co" autocomplete="url"></div>
+      <div class="field"><label for="sbKey">Supabase Publishable / anon key</label><input class="input" id="sbKey" placeholder="sb_publishable_... or anon key" autocomplete="off"></div>
+      <div class="auth-buttons"><button id="saveCloudConfig">Save Connection</button></div>
+    </div>
+    <div class="auth-buttons"><button id="changeCloudConfig" class="auth-link hidden" type="button">Change connection settings</button></div>
+    <hr style="border-color:#214664;margin:18px 0">
+    <div class="field"><label for="cloudEmail">Admin Email</label><input class="input" id="cloudEmail" type="email" autocomplete="username" placeholder="Your Supabase Auth email"></div>
+    <div class="field"><label for="cloudPassword">Password</label><input class="input" id="cloudPassword" type="password" autocomplete="current-password" placeholder="Supabase account password"></div>
+    <div class="auth-buttons"><button id="cloudLogin">Log In & Sync</button></div>
+    <p class="auth-warning">Use only your Supabase Project URL and Publishable/anon key. Never enter a service_role or secret key here. Local data is preserved if cloud loading fails.</p>
+    <p id="cloudStatus" class="notice" role="status"></p>
+  </section>
+</div>
+<div class="auth-overlay hidden" id="adminOverlay">
+  <section class="auth-card">
+    <div style="font-size:34px">⚙️</div>
+    <h2>Admin Panel</h2>
+    <p>Admin settings and cloud account.</p>
+    <p><span class="admin-badge">☁️ Cloud Connected</span></p>
+    <p id="adminAccountInfo" class="notice">You are logged in to your Supabase account.</p>
+    <hr style="border-color:#214664;margin:16px 0">
+    <h3>☁️ Cloud Sync Setup</h3>
+    <p class="notice">Change the Supabase Project URL and Publishable/anon key here, then select Save & Sync. You may need to enter these settings separately on other devices.</p>
+    <div class="field"><label for="adminSbUrl">Supabase Project URL</label><input class="input" id="adminSbUrl" placeholder="https://your-project.supabase.co" autocomplete="url"></div>
+    <div class="field"><label for="adminSbKey">Supabase Publishable / anon key</label><input class="input" id="adminSbKey" placeholder="sb_publishable_... or anon key" autocomplete="off"></div>
+    <div class="field"><label for="adminCloudEmail">Supabase Login Email</label><input class="input" id="adminCloudEmail" type="email" autocomplete="username" placeholder="Email"></div>
+    <div class="field"><label for="adminCloudPassword">Supabase Password</label><input class="input" id="adminCloudPassword" type="password" autocomplete="current-password" placeholder="Password"></div>
+    <div class="auth-buttons"><button id="adminSaveSync">Save Settings & Cloud Sync</button></div>
+    <p id="adminSyncStatus" class="notice" role="status"></p>
+    <p class="auth-warning">Use only the Publishable/anon key. Do not enter a service_role or secret key here.</p>
+    <div class="auth-buttons"><button class="btn-secondary" id="closeAdmin">Close Admin Panel</button><button class="btn-red" id="logoutBtn">Log Out from This Device</button></div>
+    <p class="auth-warning">Logging out signs you out on this device only. Product data stored in Supabase will not be deleted.</p>
+  </section>
+</div>
+
+<main class="wrap">
+<div class="stats" id="statsRoot">
+<div class="stat s-blue"><div class="label">📦 Total Products</div><strong id="totalProducts">0</strong><small>Different product types</small></div>
+<div class="stat s-green"><div class="label">🟢 Total Stock</div><strong id="totalStock">0</strong><small>Packets / Pieces</small></div>
+<div class="stat s-amber"><div class="label">⚠️ Near Expiry</div><strong id="nearCount">0</strong><small>Within the next 7 days</small></div>
+<div class="stat s-red"><div class="label">🚨 Expired</div><strong id="expiredCount">0</strong><small>Expired</small></div>
+<div class="stat s-slate"><div class="label">✖ Out of Stock</div><strong id="outCount">0</strong><small>Zero stock</small></div>
+</div>
+
+<div class="panel" id="findPanel">
+<h2>🔎 Find Products</h2>
+<div class="searchrow"><input class="input" id="search" placeholder="Enter product name / barcode / SKU…" autocomplete="off"><button id="searchBtn">Search</button><button id="clearSearch" class="btn-secondary">Clear</button></div>
+<div class="filters"><select id="statusFilter"><option value="all">All Statuses</option><option value="ok">In Stock</option><option value="near">Near Expiry</option><option value="expired">Expired</option><option value="out">Out of Stock</option></select><select id="sortFilter"><option value="name">Sort by Name</option><option value="expiry">Sort by Expiry</option><option value="stock">Stock: Highest First</option></select></div>
+</div>
+
+<div class="panel home-only-hidden" id="scannerPanel">
+<h2>▥ Barcode Scanner</h2>
+<p class="notice">Scan here using your USB/Bluetooth or device scanner. If your scanner types the barcode like a keyboard, the matching product will be shown.</p>
+<div class="searchrow"><input class="input" id="scanInput" placeholder="Tap here and scan a barcode…" autocomplete="off" inputmode="numeric"><button id="scanBtn">Search</button></div>
+<div id="scanResult" class="notice" style="margin-top:10px">The scanned barcode will be checked here.</div>
+</div>
+
+<div class="panel home-only-hidden" id="formPanel">
+<h2 id="formTitle">➕ Add New Biscuit</h2>
+<form id="productForm">
+<div class="formgrid">
+<div class="field full"><label for="name">Product Name *</label><input class="input" id="name" required placeholder="e.g. Oreo Biscuit"></div>
+<div class="field"><label for="barcode">Barcode (Optional)</label><input class="input" id="barcode" inputmode="numeric" placeholder="Barcode number"></div>
+<div class="field"><label for="sku">SKU / Item Code (Optional)</label><input class="input" id="sku" placeholder="SKU or item code"></div>
+<div class="field"><label for="stock">Current Stock (Packets) *</label><input class="input" id="stock" type="number" min="0" step="1" required value="0"></div>
+<div class="field"><label for="minStock">Low Stock Alert</label><input class="input" id="minStock" type="number" min="0" step="1" value="5"></div>
+<div class="field"><label for="expiry">Expiry Date</label><input class="input" id="expiry" type="date"></div>
+<div class="field"><label for="batch">Batch / Lot (Optional)</label><input class="input" id="batch" placeholder="Batch number"></div>
+<div class="field full"><label for="notes">Notes (Optional)</label><input class="input" id="notes" placeholder="e.g. Shelf B-3"></div>
+</div>
+<div class="form-actions"><button type="submit" id="saveBtn">Save Product</button><button type="button" class="btn-secondary hidden" id="cancelEdit">Cancel</button></div>
+</form>
+<p class="notice">Data is saved locally first and synced to Supabase when connected. Use the same Supabase account on every device.</p>
+</div>
+
+<div class="panel hidden home-only-hidden" id="expiryPanel">
+<h2>🗓️ Expiry Monitor — Expiry List</h2>
+<p class="notice">View all expired, near-expiry, and in-date products here. No file download is needed.</p>
+<div class="hidden" aria-hidden="true"><select id="expiryViewFilter"><option value="all" selected>All Products</option><option value="near">Near Expiry (within 7 days)</option><option value="expired">Expired</option><option value="ok">In Date</option><option value="out">Out of Stock</option></select><select id="expiryDays"><option value="7" selected>Next 7 Days</option><option value="14">Next 14 Days</option><option value="30">Next 30 Days</option></select></div>
+<div class="panel" style="margin-top:12px;padding:12px">
+<strong>📅 Custom Expiry Date Range</strong>
+<p class="notice">Select a start date and end date, then click Apply. You can download or print the matching list as Excel/CSV.</p>
+<div class="filters"><label>From date <input type="date" id="expiryFromDate"></label><label>To date <input type="date" id="expiryToDate"></label></div>
+<div class="form-actions"><button type="button" id="applyExpiryRangeBtn">Apply Date Range</button><button type="button" class="btn-secondary" id="clearExpiryRangeBtn">Clear Date Range</button></div>
+</div>
+<div id="expirySummary" class="notice" style="margin-top:10px"></div>
+<div class="form-actions" style="margin:10px 0"><button type="button" id="expiryExportBtn">⬇️ Download Selected List (Excel/CSV)</button><button type="button" id="expiryPrintBtn" class="btn-secondary">🖨️ Print Selected List</button></div>
+<div id="expiryList" class="product-list"></div>
+<button id="backToProducts" class="btn-secondary" style="margin-top:12px;width:100%">Back to All Products</button>
+</div>
+<div class="section-title home-only-hidden">📋 Product List <span id="listCount" style="color:#9db5d1;font-size:12px"></span></div>
+<div class="product-list home-only-hidden" id="productList"></div>
+<div class="panel home-only-hidden" id="skuImportPanel"><h2>📥 Store SKU / Excel File Upload</h2><p class="notice">Upload CSV, TSV, Excel (.xlsx/.xls) or text file. Large SKU lists (including 100,000+ rows) are processed with indexed matching and batched cloud uploads. Actual limits depend on file size, phone/browser memory, Supabase plan, and database/API limits. The tracker reads product name, SKU, barcode, and Stock/Quantity if available. Stock is optional: if the file has a stock column, its value updates the product stock; if it has no stock column or the cell is blank, existing stock is preserved and new products start at 0. Missing fields can be completed later using Edit. Existing products matched by SKU/barcode—or by exact product name when identifiers are absent—are updated rather than duplicated. Re-uploading the same list should not increase the product count.</p><div class="form-actions"><button id="skuImportBtn" type="button">Choose SKU / Excel File</button><button id="templateBtn" class="btn-secondary" type="button">Sample CSV</button></div><input type="file" id="skuFile" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden"><div id="skuImportResult" class="notice" style="margin-top:10px"></div></div><div class="panel home-only-hidden" id="reportPanel"><h2>💾 Backup & Reports</h2><div class="form-actions"><button id="exportBtn">Export Excel/CSV</button><button id="backupBtn" class="btn-secondary">Backup JSON</button></div><div class="form-actions"><button id="importBtn" class="btn-secondary">Backup Import</button><button id="resetBtn" class="btn-red">Clear All Data</button></div><input type="file" id="importFile" accept=".json,application/json" class="hidden"><p class="notice">Data is saved locally first and synced to Supabase when connected. Download backups regularly. Never use Clear All Data unless you intend to delete the cloud data too.</p></div>
+</main>
+<section id="statDetailPage" class="hidden" style="position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:18px 16px 100px;">
+  <div style="max-width:920px;margin:auto;">
+    <button id="detailBack" class="btn-secondary" type="button">← Back</button>
+    <h2 id="detailPageTitle" style="margin:18px 0 6px;font-size:22px">Products</h2>
+    <p id="detailPageDescription" class="notice"></p>
+    <div id="detailProductList" class="product-list"></div>
+  </div>
+</section>
+<section id="navPage" class="hidden" style="position:fixed;inset:0 0 76px 0;z-index:8;background:var(--bg);overflow:auto;padding:18px 14px 100px;">
+  <div style="max-width:920px;margin:auto;">
+    <button id="navPageBack" class="btn-secondary" type="button">← Back</button>
+    <h2 id="navPageTitle" style="margin:18px 0 8px;font-size:22px"></h2>
+    <div id="navPageContent"></div>
+  </div>
+</section>
+<nav class="bottom"><button class="active" id="navHome"><span>⌂</span>Home</button><button id="navProducts"><span>▦</span>Products</button><button id="navAdd"><span>＋</span>Add Item</button><button id="navScan"><span>▥</span>Scan</button><button id="navExpiry"><span>◷</span>Expiry</button><button id="navPickList"><span>☑</span>Pick List</button><button id="navReport"><span>▤</span>Reports</button><button id="navAdmin"><span>⚙</span>Admin</button></nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// Legacy key is intentionally retained so existing local data is not lost.
+const LEGACY_KEY='biscuitExpiryTracker.v1';
+let KEY='biscuitExpiryTracker.guest.v1';
+let activeDataUserId=null;
+let products=[], editingId=null;
+function switchUserStorage(userId){
+ const nextKey=userId ? ('biscuitExpiryTracker.user.'+String(userId)+'.v1') : 'biscuitExpiryTracker.guest.v1';
+ if(KEY===nextKey && activeDataUserId===userId)return;
+ // Never carry the previous account's in-memory products into a different account.
+ products=[]; editingId=null; activeDataUserId=userId||null; KEY=nextKey;
+ try{const saved=JSON.parse(localStorage.getItem(KEY)||'[]');products=Array.isArray(saved)?saved:[]}catch(e){products=[]}
+ if(typeof render==='function')render();
+}
+
+const $=id=>document.getElementById(id);
+function load(){try{products=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(products))products=[]}catch(e){products=[]}}
+function safeCacheProducts(){try{localStorage.setItem(KEY,JSON.stringify(products));return true}catch(e){console.warn('Local cache full; cloud remains source of truth.',e);return false}}
+function persist(){const cached=safeCacheProducts();if(cloudSession&&cloudClient){syncProducts().catch(e=>{console.error(e);setCloudStatus('Cloud sync failed: '+(e.message||'check connection/table policies'));});if(!cached)setCloudStatus('Browser storage is full; changes are being saved to your Supabase cloud account.');return true;}if(!cached){toast('Browser storage is full. Log in to Supabase and sync your data, then export a backup.');return false;}return true}
+function daysTo(date){if(!date)return null;const m=String(date).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return null;const a=new Date();a.setHours(0,0,0,0);const b=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
+function expiresWithin30Days(p){const d=daysTo(p?.expiry);return d!==null&&d>=0&&d<=30}
+function status(p){if(Number(p.stock)<=0)return'out';const d=daysTo(p.expiry);if(d!==null&&d<0)return'expired';if(d!==null&&d<=7)return'near';return'ok'}
+function statusLabel(s){return({ok:'In Stock',near:'Near Expiry',expired:'Expired',out:'Out of Stock'})[s]}
+function dateLabel(p){if(!p.expiry)return'Date not set';const d=daysTo(p.expiry);if(d<0)return`${p.expiry} · ${Math.abs(d)} days past expiry`;if(d===0)return`${p.expiry} · expires today`;return`${p.expiry} · ${d} days remaining`}
+function toast(msg){const old=document.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)}
+function render(){
+ const count=s=>products.filter(p=>status(p)===s).length;
+ $('totalProducts').textContent=products.length;
+ $('totalStock').textContent=products.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0),0).toLocaleString();
+ $('nearCount').textContent=count('near');$('expiredCount').textContent=count('expired');$('outCount').textContent=count('out');
+ const q=$('search').value.trim().toLowerCase(),sf=$('statusFilter').value,sort=$('sortFilter').value;
+ let list=products.filter(p=>[p.name,p.barcode,p.sku,p.batch,p.notes].join(' ').toLowerCase().includes(q)).filter(p=>sf==='all'||status(p)===sf);
+ list.sort((a,b)=>sort==='stock'?(Number(b.stock)-Number(a.stock)):sort==='expiry'?((a.expiry||'9999').localeCompare(b.expiry||'9999')):a.name.localeCompare(b.name));
+ $('listCount').textContent=`(${list.length})`;
+ const root=$('productList');root.innerHTML='';
+ if(!list.length){root.innerHTML='<div class="panel empty">No products have been added yet.<br>Use the form above to add your first product.</div>';return}
+ // Keep the interface responsive for very large catalogs; all records remain searchable and stored.
+ const DISPLAY_LIMIT=500;
+ if(list.length>DISPLAY_LIMIT){const note=document.createElement('div');note.className='notice';note.textContent=`Showing first ${DISPLAY_LIMIT.toLocaleString()} of ${list.length.toLocaleString()} matching products. Use Search to narrow the list.`;root.append(note);list=list.slice(0,DISPLAY_LIMIT)}
+ list.forEach(p=>{const s=status(p),low=Number(p.stock)>0&&Number(p.stock)<=Number(p.minStock||0),expiresWithinMonth=expiresWithin30Days(p);
+ const card=document.createElement('article');card.className='product'+(expiresWithinMonth?' expiring-month':'');
+ const left=document.createElement('div');const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
+ const meta=document.createElement('div');meta.className='meta';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'}`;left.append(meta);
+ const tags=document.createElement('div');tags.className='pills';const pill=document.createElement('span');pill.className='pill '+s; pill.textContent=statusLabel(s);tags.append(pill);
+ if(low){const lp=document.createElement('span');lp.className='pill near';lp.textContent='Low Stock';tags.append(lp)}
+ if(expiresWithinMonth){const mp=document.createElement('span');mp.className='pill expiring-month-pill';mp.textContent='⚠ Expires within 30 days';tags.append(mp)}
+ const exp=document.createElement('div');exp.className='meta'+(expiresWithinMonth?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(tags,exp);
+ if(p.batch||p.notes){const nt=document.createElement('div');nt.className='meta';nt.textContent=[p.batch?'Batch: '+p.batch:'',p.notes].filter(Boolean).join(' · ');left.append(nt)}
+ const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);
+ const actions=document.createElement('div');actions.className='actions';
+ // One-tap product selection from Products list adds/removes it from the persistent Pick List.
+ const pickBtn=document.createElement('button');
+ const isPicked=()=>pickListSelected.has(String(p.id));
+ const refreshPickButton=()=>{pickBtn.textContent=isPicked()?'✓ Added to Pick List':'☑ Add to Pick List';pickBtn.className=isPicked()?'btn-green':'btn-secondary';};
+ refreshPickButton();
+ pickBtn.onclick=()=>{const id=String(p.id);if(isPicked()){pickListSelected.delete(id);toast('Removed from Pick List: '+p.name)}else{pickListSelected.add(id);toast('Added to Pick List: '+p.name)}savePickListState();refreshPickButton();if(typeof renderPickList==='function'&&$('pickListResults'))renderPickList();};
+ actions.append(pickBtn);
+ [['✎ Edit',()=>edit(p.id),'btn-secondary'],['＋ Add Stock',()=>changeStock(p.id,1),'btn-green'],['− Reduce Stock',()=>changeStock(p.id,-1),'btn-secondary'],['🗑 Delete',()=>removeProduct(p.id),'btn-red']].forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=fn;actions.append(b)});
+ card.append(left,qty,actions);root.append(card);
+ });
+}
+function openStatDetail(kind){
+ const titles={products:'Total Products',stock:'Total Stock',near:'Near Expiry',expired:'Expired Products',out:'Out of Stock'};
+ const descriptions={products:'All products saved in this account.',stock:'Products with available stock.',near:'Products expiring within the next 7 days.',expired:'Products whose expiry date has passed.',out:'Products with zero stock.'};
+ let list=products.slice();
+ if(kind==='stock') list=list.filter(p=>Number(p.stock)>0);
+ else if(['near','expired','out'].includes(kind)) list=list.filter(p=>status(p)===kind);
+ list.sort((a,b)=>a.name.localeCompare(b.name));
+ $('detailPageTitle').textContent=titles[kind]||'Products';
+ $('detailPageDescription').textContent=(descriptions[kind]||'')+' Total: '+list.length;
+ const root=$('detailProductList');root.innerHTML='';
+ if(!list.length){root.innerHTML='<div class="panel empty">No matching products found.</div>'}
+ else list.forEach(p=>{
+   const isExpiring=expiresWithin30Days(p);
+   const card=document.createElement('article');card.className='product'+(isExpiring?' expiring-month':'');
+   const left=document.createElement('div');const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
+   const meta=document.createElement('div');meta.className='meta';meta.textContent='Barcode: '+(p.barcode||'—')+' · SKU: '+(p.sku||'—');left.append(meta);
+   const tags=document.createElement('div');tags.className='pills';const pill=document.createElement('span');pill.className='pill '+status(p);pill.textContent=statusLabel(status(p));tags.append(pill);
+   if(isExpiring){const warn=document.createElement('span');warn.className='pill expiring-month-pill';warn.textContent='⚠ Expires within 30 days';tags.append(warn)}
+   left.append(tags);
+   const exp=document.createElement('div');exp.className='meta'+(isExpiring?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(exp);
+   const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);
+   const actions=document.createElement('div');actions.className='actions';
+   const editBtn=document.createElement('button');editBtn.className='btn-secondary';editBtn.textContent='✎ Edit';editBtn.onclick=()=>{closeStatDetail();edit(p.id)};actions.append(editBtn);
+   card.append(left,qty,actions);root.append(card);
+ });
+ $('statDetailPage').classList.remove('hidden');
+}
+function closeStatDetail(){$('statDetailPage').classList.add('hidden')}
+$('detailBack').addEventListener('click',closeStatDetail);
+[['totalProducts','products'],['totalStock','stock'],['nearCount','near'],['expiredCount','expired'],['outCount','out']].forEach(([id,kind])=>{
+ const card=$(id)?.closest('.stat');if(card){card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-label','Open '+kind+' details');card.addEventListener('click',()=>openStatDetail(kind));card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStatDetail(kind)}})}
+});
+
+function resetForm(){editingId=null;$('productForm').reset();$('stock').value=0;$('minStock').value=5;$('formTitle').textContent='➕ Add New Biscuit';$('saveBtn').textContent='Save Product';$('cancelEdit').classList.add('hidden')}
+function edit(id){const p=products.find(x=>x.id===id);if(!p)return;openNavPage('Add Item',[$('formPanel')],'navAdd');editingId=id;['name','barcode','sku','stock','minStock','expiry','batch','notes'].forEach(k=>$(k).value=p[k]??(k==='stock'||k==='minStock'?0:''));$('formTitle').textContent='✎ Edit Product Details';$('saveBtn').textContent='Save Changes';$('cancelEdit').classList.remove('hidden');$('navPage').scrollTop=0;setTimeout(()=>{$('name').focus();$('formPanel').scrollIntoView({behavior:'smooth',block:'start'})},50)}
+function runBarcodeScan(){
+ const code=$('scanInput').value.trim(); if(!code){toast('Scan a barcode first');$('scanInput').focus();return}
+ const found=products.find(p=>String(p.barcode||'').trim()===code||String(p.sku||'').trim()===code);
+ const result=$('scanResult');result.textContent='';
+ if(found){
+   const msg=document.createElement('div');msg.textContent=`Product found: ${found.name} · Current stock: ${found.stock} packets · Expiry: ${found.expiry||'Not set'}`;result.append(msg);
+   const b=document.createElement('button');b.className='btn-secondary btn-small';b.style.marginTop='8px';b.textContent='Open Product Details';b.onclick=()=>edit(found.id);result.append(b);toast('Barcode matched: '+found.name);
+ }else{
+   result.textContent='This barcode is not in the Product List. The barcode has been added to the form for a new product—enter the product name and remaining details.';
+   resetForm();$('barcode').value=code;$('formPanel').scrollIntoView({behavior:'smooth',block:'start'});$('name').focus();toast('New barcode — enter product name');
+ }
+}
+$('scanBtn').onclick=runBarcodeScan;
+$('scanInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBarcodeScan()}});
+$('navScan')?.addEventListener('click',()=>{$('scannerPanel').scrollIntoView({behavior:'smooth'});$('scanInput').focus()});
+
+$('productForm').addEventListener('submit',async e=>{e.preventDefault();const data={name:$('name').value.trim(),barcode:$('barcode').value.trim(),sku:$('sku').value.trim(),stock:Math.max(0,parseInt($('stock').value||0,10)),minStock:Math.max(0,parseInt($('minStock').value||0,10)),expiry:$('expiry').value,batch:$('batch').value.trim(),notes:$('notes').value.trim()};
+if(!data.name){toast('Enter product name');return}
+if(editingId){
+ if(!cloudClient||!cloudSession||!cloudSession.user||!cloudSession.user.email){toast('Log in to your Supabase account to edit products.');return;}
+ const password=window.prompt('Enter the password for '+cloudSession.user.email+' to update this product:');
+ if(password===null)return;
+ if(!password){toast('Enter a password. The product was not updated.');return;}
+ const saveBtn=$('saveBtn');saveBtn.disabled=true;saveBtn.textContent='Verifying password…';
+ try{
+  const {data:authData,error:authError}=await cloudClient.auth.signInWithPassword({email:cloudSession.user.email,password});
+  if(authError)throw authError;
+  if(!authData.user||authData.user.id!==cloudSession.user.id)throw new Error('The logged-in account could not be verified.');
+  cloudSession=authData.session||cloudSession;
+  const i=products.findIndex(p=>p.id===editingId);if(i<0)throw new Error('This product is no longer in the list.');
+  products[i]={...products[i],...data};
+  persist();resetForm();render();toast('Password verified. Saving product changes.');
+ }catch(err){console.error(err);toast('Incorrect password or verification failed. The product was not updated.');setCloudStatus('Edit password verification failed: '+(err.message||'check password and connection'));}
+ finally{saveBtn.disabled=false;if(editingId)saveBtn.textContent='Save Changes';}
+}else{products.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),...data,createdAt:new Date().toISOString()});persist();resetForm();render();toast('New product saved')}
+});
+$('cancelEdit').onclick=()=>{const wasEditing=!!editingId;resetForm();if(wasEditing){closeNavPage();openNavPage('Products',[$('findPanel'),document.querySelector('.section-title'),$('productList')],'navProducts')}};
+function changeStock(id,delta){const p=products.find(x=>x.id===id);if(!p)return;const v=Number(p.stock)||0;if(delta<0&&v<=0){toast('Stock is already 0');return}p.stock=Math.max(0,v+delta);persist();render();toast('Stock updated')}
+async function removeProduct(id){const p=products.find(x=>x.id===id);if(!p)return;if(!cloudClient||!cloudSession||!cloudSession.user||!cloudSession.user.email){toast('Log in to your Supabase account before deleting products.');return;}if(!confirm(`“${p.name}” Delete this product?`))return;const email=cloudSession.user.email;const password=window.prompt('Enter the password for '+email+' to update this product:');if(password===null)return;if(!password){toast('No password entered. The product was not deleted.');return;}try{const userId=cloudSession.user.id;const {data:authData,error:authError}=await cloudClient.auth.signInWithPassword({email,password});if(authError)throw authError;if(!authData.user||authData.user.id!==userId)throw new Error('Account verification mismatch.');cloudSession=authData.session||cloudSession;await deleteCloudProduct(id);products=products.filter(x=>x.id!==id);safeCacheProducts();render();toast('Password verified. Product deleted.');}catch(err){console.error(err);toast('Incorrect password or cloud deletion failed. The product was not deleted.');setCloudStatus('Delete failed: '+(err.message||'check password and connection'));}}
+$('search').oninput=()=>{if(!$('navPage').classList.contains('hidden')&&$('productList').isConnected)render()};function runHomeProductSearch(){if($('navPage').classList.contains('hidden'))openNavPage('Products',[$('findPanel'),document.querySelector('.section-title'),$('productList')],'navProducts');render();$('navPage').scrollTop=0;setTimeout(()=>{const list=$('productList');if(list)list.scrollIntoView({behavior:'smooth',block:'start'})},60)}$('searchBtn').onclick=runHomeProductSearch;$('search').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runHomeProductSearch()}};$('statusFilter').onchange=render;$('sortFilter').onchange=render;$('clearSearch').onclick=()=>{$('search').value='';render();$('search').focus()};
+$('exportBtn').onclick=()=>{const rows=[['Product Name','Barcode','SKU','Stock (Packets)','Minimum Stock','Expiry Date','Status','Batch','Notes'],...products.map(p=>[p.name,p.barcode,p.sku,p.stock,p.minStock,p.expiry,statusLabel(status(p)),p.batch,p.notes])];const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download='all-items-stock-expiry.csv';a.click();URL.revokeObjectURL(a.href);toast('CSV report downloaded')};
+$('backupBtn').onclick=()=>download('all-items-tracker-backup.json',JSON.stringify({version:1,exportedAt:new Date().toISOString(),products},null,2),'application/json');
+function download(name,data,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('importBtn').onclick=()=>$('importFile').click();
+$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());const arr=Array.isArray(d)?d:d.products;if(!Array.isArray(arr))throw Error();if(confirm('Add the products from this backup to the current data?')){const known=new Set(products.map(p=>p.id));arr.forEach(p=>products.push({...p,id:known.has(p.id)?String(Date.now())+Math.random():p.id||String(Date.now())}));persist();render();toast('Backup imported')}}catch(err){toast('Please select a valid backup JSON file')}e.target.value=''};
+
+// Import store SKU/Excel file; recognize common English and Bangla headers and preserve missing fields.
+function normHead(v){return String(v??'').replace(/^\uFEFF/,'').trim().toLowerCase().replace(/[\s_\-./()]+/g,'').replace(/[^\p{L}\p{N}]/gu,'')}
+function parseDelimited(text){
+ const first=(text.split(/\r?\n/).find(x=>x.trim())||'');const candidates=[',','\t',';'];const delim=candidates.sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+ const rows=[];let row=[],cell='',quoted=false;
+ for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===delim&&!quoted){row.push(cell.trim());cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);row=[];cell=''}else cell+=c}
+ row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);return rows;
+}
+function pickColumn(headers,candidates){return headers.findIndex(h=>candidates.includes(normHead(h)))}
+function excelDate(v){if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);if(typeof v==='number'&&window.XLSX&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}const t=String(v??'').trim();if(/^\d{5}(?:\.\d+)?$/.test(t)&&window.XLSX&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(Number(t));if(d&&d.y>1900)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}if(!t)return '';if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(t)){const [y,m,d]=t.split('-');return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}return ''}
+$('skuImportBtn').onclick=()=>$('skuFile').click();
+$('templateBtn').onclick=()=>download('store-sku-template.csv','\ufeffProduct Name,Barcode,SKU,Stock,Expiry Date,Batch,Notes\r\nOreo Biscuit,7622200600013,SKU001,25,2027-12-31,BATCH01,Stock is optional; leave blank if unavailable\r\n','text/csv;charset=utf-8;');
+$('skuFile').onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;const out=$('skuImportResult');
+ if(!cloudClient||!cloudSession){out.textContent='Log in to your own Supabase account before uploading the SKU file. Without login, uploaded data will not be available on other devices or after a later login.';toast('Log in before importing.');e.target.value='';return;}
+ out.textContent='Reading file…';
+ try{
+  let rows=[];const lower=f.name.toLowerCase();
+  if(lower.endsWith('.xlsx')||lower.endsWith('.xls')){
+   if(!window.XLSX)throw Error('Excel reader could not load. Check internet connection, or save the Excel file as CSV UTF-8 and upload again.');
+   const buf=await f.arrayBuffer();const wb=XLSX.read(buf,{type:'array',cellDates:true});const sheet=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:true}).map(r=>r.map(v=>v instanceof Date?v.toISOString().slice(0,10):String(v??'').trim())).filter(r=>r.some(v=>String(v).trim()!==''));
+  }else rows=parseDelimited(await f.text());
+  if(rows.length<1)throw Error('The file has no readable rows.');
+  let headers=rows[0].map(v=>String(v??''));let dataRows=rows.slice(1);
+  const nameI=pickColumn(headers,['productname','product','itemname','item','name','description','materialdescription','productdescription','','','']);
+  const barcodeI=pickColumn(headers,['barcode','barcodeno','barcodenumber','ean','upc','gtin','ean13','','']);
+  const skuI=pickColumn(headers,['sku','skucode','itemcode','productcode','materialcode','article','itemnumber','stockkeepingunit','itemid','productid','code','','','']);
+  const stockI=pickColumn(headers,['stock','stockqty','stockquantity','stocklevel','stockpackets','stockpieces','currentstock','currentquantity','quantity','qty','onhand','quantityonhand','inventory','availablequantity','availableqty','packets','pieces','units','balance','closingstock','openingstock','','','','','','','']);
+  const minI=pickColumn(headers,['minstock','minimumstock','reorderlevel','lowstockalert','']);
+  const expiryI=pickColumn(headers,['expiry','expirydate','expirationdate','bestbefore','bestbeforedate','','','']);
+  const batchI=pickColumn(headers,['batch','batchno','lot','lotnumber','batchnumber']);
+  const notesI=pickColumn(headers,['notes','note','remarks','comment','location','shelf','']);
+  // If the file has no recognizable headings, assume first column is name/item code and keep every row importable.
+  const hasRecognized=[nameI,barcodeI,skuI,stockI,minI,expiryI,batchI,notesI].some(i=>i>=0);
+  const hasIdentity=[nameI,barcodeI,skuI].some(i=>i>=0);
+  if(!hasIdentity){dataRows=hasRecognized?rows.slice(1):rows;headers=[];}
+  let added=0,updated=0,skipped=0;
+  const val=(r,i)=>i>=0?String(r[i]??'').trim():'';
+  // Index existing products once so imports with 100k+ rows do not perform O(n²) lookups.
+  const identityMap=new Map();
+  const normalizeProductName=v=>String(v??'').normalize('NFKC').toLowerCase().replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ');
+  const nameMap=new Map();
+  for(const p of products){
+   if(p.barcode){const k='b:'+String(p.barcode).trim().replace(/\s+/g,'');if(!identityMap.has(k))identityMap.set(k,p)}
+   if(p.sku){const k='s:'+String(p.sku).trim().toLowerCase().replace(/\s+/g,'');if(!identityMap.has(k))identityMap.set(k,p)}
+   const nk=normalizeProductName(p.name);if(nk&&!nameMap.has(nk))nameMap.set(nk,p);
+  }
+  for(let n=0;n<dataRows.length;n++){
+   const r=dataRows[n];
+   let name=val(r,nameI),barcode=val(r,barcodeI),sku=val(r,skuI);
+   if(!hasIdentity){name=String(r[0]??'').trim();sku=String(r[1]??'').trim();barcode=String(r[2]??'').trim();}
+   const code=barcode||sku;
+   if(!name&&!code){skipped++;continue}
+   if(!name)name=sku||barcode||`Imported item ${n+1}`;
+   const stockRaw=val(r,stockI),minRaw=val(r,minI),expiryRaw=val(r,expiryI),batch=val(r,batchI),notes=val(r,notesI);
+   const stockText=stockRaw.replace(/[,\s]/g,'');const stockNum=stockText!==''?Number(stockText):NaN;const stock=Number.isFinite(stockNum)?Math.max(0,Math.floor(stockNum)):0;
+   const minStock=minRaw!==''&&Number.isFinite(Number(minRaw))?Math.max(0,parseInt(minRaw,10)||0):5;
+   const expiry=excelDate(expiryRaw);
+   const barcodeKey=barcode?'b:'+barcode.trim().replace(/\s+/g,''):'';
+   const skuKey=sku?'s:'+sku.trim().toLowerCase().replace(/\s+/g,''):'';
+   // Prefer strong identifiers. If a file/product has no usable identifier, fall back to exact normalized name
+   // so importing the same name-only SKU list again does not create another copy of every product.
+   let existing=(barcodeKey&&identityMap.get(barcodeKey))||(skuKey&&identityMap.get(skuKey));
+   if(!existing && name){const named=nameMap.get(normalizeProductName(name));if(named && ((!barcode&&!sku)||(!named.barcode&&!named.sku)))existing=named;}
+   if(existing){
+    existing.name=name||existing.name;existing.barcode=barcode||existing.barcode||'';existing.sku=sku||existing.sku||'';
+    if(stockRaw!=='')existing.stock=stock;if(minRaw!=='')existing.minStock=minStock;if(expiry)existing.expiry=expiry;if(batch)existing.batch=batch;if(notes)existing.notes=notes;
+    if(existing.barcode)identityMap.set('b:'+String(existing.barcode).trim().replace(/\s+/g,''),existing);
+    if(existing.sku)identityMap.set('s:'+String(existing.sku).trim().toLowerCase().replace(/\s+/g,''),existing);
+    const nk=normalizeProductName(existing.name);if(nk&&!nameMap.has(nk))nameMap.set(nk,existing);
+    updated++;
+   }else{
+    const newProduct={id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),name,barcode,sku,stock,minStock,expiry,batch,notes:notes||'Imported from SKU file — check and complete missing details',createdAt:new Date().toISOString()};products.push(newProduct);if(barcode)identityMap.set('b:'+barcode.trim().replace(/\s+/g,''),newProduct);if(sku)identityMap.set('s:'+sku.trim().toLowerCase().replace(/\s+/g,''),newProduct);const nk=normalizeProductName(name);if(nk&&!nameMap.has(nk))nameMap.set(nk,newProduct);added++;
+   }
+  }
+  if(added+updated===0)throw Error('No usable product rows found. Check that the file contains at least a product name, SKU or barcode.');
+  // Cloud-first import: do not let a full browser localStorage quota block cloud saving.
+  render();out.textContent='Saving imported products to your Supabase account…';
+  await syncProducts();
+  safeCacheProducts();
+  const cloudRows=await fetchCloudProducts();
+  const cloudIds=new Set(cloudRows.map(r=>String(r.id)));
+  const missingCloud=products.filter(p=>!cloudIds.has(String(p.id))).length;
+  if(missingCloud)throw Error(`Import local-e save hoyeche, kintu ${missingCloud} product cloud-e  । Logout  ; connection/RLS    sync ।`);
+  out.textContent=`Import & Cloud Sync successful: ${added} new products, ${updated} matched products updated, ${skipped} empty rows skipped. Saved to this account (${cloudRows.length} products). Missing fields can be completed later from Products → Edit.`;toast('SKU import cloud-e save hoyeche');
+ }catch(err){out.textContent=err.message||'Could not read this file. Try CSV UTF-8 or Excel .xlsx.'}finally{e.target.value=''}
+};
+
+$('resetBtn').onclick=async()=>{
+ if(!cloudClient||!cloudSession||!cloudSession.user||!cloudSession.user.email){toast('Log in to your own Supabase account before clearing data.');return;}
+ if(!confirm('Warning: All products for this account will be permanently deleted. Continue?'))return;
+ const email=cloudSession.user.email;
+ const password=window.prompt('Enter the password for '+email+' to update this product:');
+ if(password===null)return;
+ if(!password){toast('No password entered. No data was deleted.');return;}
+ const btn=$('resetBtn');const oldText=btn.textContent;btn.disabled=true;btn.textContent='Verifying password…';
+ try{
+  const userId=cloudSession.user.id;
+  const {data:authData,error:authError}=await cloudClient.auth.signInWithPassword({email,password});
+  if(authError)throw authError;
+  if(!authData.user||authData.user.id!==userId)throw new Error('Account verification mismatch.');
+  cloudSession=authData.session||cloudSession;
+  btn.textContent='Waiting for cloud sync…';
+  // Stop any in-flight import/edit sync from re-inserting rows while Clear Data runs.
+  while(cloudBusy) await new Promise(resolve=>setTimeout(resolve,100));
+  cloudClearing=true;
+  syncRequested=false;
+  btn.textContent='Deleting this account’s Supabase data…';
+  // Delete only rows owned by the authenticated user, then verify that none remain.
+  let remaining=[];
+  for(let attempt=0;attempt<3;attempt++){
+   const {error:deleteError}=await cloudClient.from('products').delete().eq('owner_id',userId);
+   if(deleteError)throw deleteError;
+   remaining=await fetchCloudProducts();
+   if(remaining.length===0)break;
+   // If any rows remain, retry by explicit IDs; this also avoids relying on a single bulk request.
+   for(let i=0;i<remaining.length;i+=200){const ids=remaining.slice(i,i+200).map(row=>String(row.id));const {error}=await cloudClient.from('products').delete().eq('owner_id',userId).in('id',ids);if(error)throw error;}
+  }
+  remaining=await fetchCloudProducts();
+  if(remaining.length)throw new Error('Supabase- '+remaining.length+' row  ; delete   ।');
+  products=[];
+  safeCacheProducts();
+  resetForm();render();
+  setCloudStatus('Connected · this account’s Supabase products cleared and verified.');
+  toast('Password verified. This user’s Supabase data has been deleted and verified.');
+ }catch(err){console.error(err);toast('Clear Data did not complete. Check the password, internet connection, and Supabase delete policy.');setCloudStatus('Clear Data failed: '+(err.message||'check password and connection'));}
+ finally{cloudClearing=false;btn.disabled=false;btn.textContent=oldText;}
+};
+// Bottom navigation opens each tool in its own full-screen page while preserving the original elements and event handlers.
+const navPage=$('navPage'), navPageContent=$('navPageContent');let navMoved=[];
+function openNavPage(title, elements, activeId){
+  closeNavPage(false);
+  $('navPageTitle').textContent=title; navMoved=[];
+  elements.forEach(el=>{if(!el)return;const marker=document.createComment('nav-page-placeholder');el.parentNode.insertBefore(marker,el);navMoved.push({el,marker});navPageContent.appendChild(el);el.classList.remove('hidden','home-only-hidden');});
+  navPage.classList.remove('hidden');document.querySelectorAll('.bottom button').forEach(b=>b.classList.toggle('active',b.id===activeId));
+  navPage.scrollTop=0;
+}
+function closeNavPage(updateNav=true){
+  navMoved.forEach(({el,marker})=>{if(marker.parentNode){marker.parentNode.insertBefore(el,marker);marker.parentNode.removeChild(marker);}if(['scannerPanel','formPanel','expiryPanel','productList','skuImportPanel','reportPanel'].includes(el.id)||el.classList.contains('section-title'))el.classList.add('home-only-hidden');});navMoved=[];navPageContent.innerHTML='';navPage.classList.add('hidden');
+  if(updateNav)document.querySelectorAll('.bottom button').forEach(b=>b.classList.toggle('active',b.id==='navHome'));
+}
+$('navPageBack').onclick=()=>closeNavPage();
+$('navHome').onclick=()=>{closeNavPage(false);document.querySelectorAll('.bottom button').forEach(b=>b.classList.toggle('active',b.id==='navHome'));window.scrollTo({top:0,behavior:'smooth'});};
+$('navProducts').onclick=()=>openNavPage('Products',[$('findPanel'),document.querySelector('.section-title'),$('productList')],'navProducts');
+$('navAdd').onclick=()=>{openNavPage('Add Item',[$('formPanel')],'navAdd');$('name').focus()};
+function renderExpiry(){
+ const panel=$('expiryPanel');panel.classList.remove('hidden');
+ const from=$('expiryFromDate')?.value||'',to=$('expiryToDate')?.value||'';
+ let list=[];
+ const root=$('expiryList');root.innerHTML='';
+ if(!from||!to){
+   $('expirySummary').textContent='Select both From date and To date, then click Apply Date Range to show matching products.';
+   root.innerHTML='<div class="empty">No products shown. Select a date range and click Apply Date Range.</div>';
+   return;
+ }
+ if(from>to){
+   $('expirySummary').textContent='From date cannot be after To date.';
+   root.innerHTML='<div class="empty">Please correct the date range.</div>';
+   return;
+ }
+ list=products.filter(p=>Number(p.stock)>0 && !!p.expiry && p.expiry>=from && p.expiry<=to)
+   .sort((a,b)=>((a.expiry||'9999').localeCompare(b.expiry||'9999')));
+ $('expirySummary').textContent=`Expiry dates from ${from} to ${to}: ${list.length} products.`;
+ if(!list.length){root.innerHTML='<div class="empty">No products with expiry dates in this range.</div>';return}
+ list.forEach(p=>{
+   const st=status(p),isExpiring=expiresWithin30Days(p),card=document.createElement('article');card.className='product'+(isExpiring?' expiring-month':'');
+   const left=document.createElement('div'),name=document.createElement('div');name.className='pname';name.textContent=p.name;left.append(name);
+   const meta=document.createElement('div');meta.className='meta';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'}`;left.append(meta);
+   const pills=document.createElement('div');pills.className='pills';const pill=document.createElement('span');pill.className='pill '+st;pill.textContent=statusLabel(st);pills.append(pill);left.append(pills);
+   if(isExpiring){const warn=document.createElement('span');warn.className='pill expiring-month-pill';warn.textContent='⚠ Expires within 30 days';pills.append(warn)}
+   const exp=document.createElement('div');exp.className='meta'+(isExpiring?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(exp);
+   const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);
+   const actions=document.createElement('div');actions.className='actions';const editBtn=document.createElement('button');editBtn.className='btn-secondary';editBtn.textContent='✎ Edit';editBtn.onclick=()=>edit(p.id);actions.append(editBtn);
+   card.append(left,qty,actions);root.append(card);
+ });
+}
+$('navExpiry').onclick=()=>{renderExpiry();openNavPage('Expiry',[$('expiryPanel')],'navExpiry')};
+function getExpiryFilteredProducts(){
+ const from=$('expiryFromDate')?.value||'',to=$('expiryToDate')?.value||'';
+ if(!from||!to||from>to)return [];
+ return products.filter(p=>Number(p.stock)>0 && !!p.expiry && p.expiry>=from && p.expiry<=to)
+   .sort((a,b)=>((a.expiry||'9999').localeCompare(b.expiry||'9999')));
+}
+function expiryReportTitle(){
+ const mode=$('expiryViewFilter').selectedOptions[0]?.textContent||'Expiry List';
+ const days=$('expiryDays').value;
+ const from=$('expiryFromDate')?.value||'',to=$('expiryToDate')?.value||'';
+ return from && to ? 'Expiry '+from+' to '+to : 'Expiry Date Range Not Selected';
+}
+$('expiryExportBtn').onclick=()=>{
+ const list=getExpiryFilteredProducts();if(!list.length){toast('Select a valid date range with matching products first.');return;}
+ const rows=[['Product Name','Barcode','SKU','Stock (Packets)','Expiry Date','Status','Batch','Notes'],...list.map(p=>[p.name,p.barcode,p.sku,p.stock,p.expiry,statusLabel(status(p)),p.batch,p.notes])];
+ const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='expiry-selected-'+$('expiryViewFilter').value+'-'+$('expiryDays').value+'-days.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Selected expiry list downloaded ('+list.length+' products)');
+};
+$('expiryPrintBtn').onclick=()=>{
+ const list=getExpiryFilteredProducts();if(!list.length){toast('Select a valid date range with matching products first.');return;}
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const rows=list.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}</td><td>${esc(p.barcode||'—')}</td><td>${esc(p.sku||'—')}</td><td>${esc(p.stock??0)}</td><td>${esc(p.expiry||'—')}</td><td>${esc(statusLabel(status(p)))}</td><td>${esc(p.batch||'—')}</td></tr>`).join('');
+ const w=window.open('','_blank');if(!w){toast('Allow pop-ups to print this report.');return;}
+ w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(expiryReportTitle())}</title><style>*{font-weight:800!important;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:20px;color:#111;position:relative}.print-brand{font-size:34px;font-weight:900!important;letter-spacing:1.2px;text-align:left;margin:0 0 16px;color:#000}h2{margin-bottom:5px}p{margin-top:0;color:#222}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1.5px solid #555;padding:6px;text-align:left}th{background:#eee}.watermark{position:fixed;z-index:0;pointer-events:none;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-32deg);font-size:clamp(38px,8vw,90px);font-weight:900!important;letter-spacing:3px;color:rgba(0,0,0,.09);white-space:nowrap;width:100%;text-align:center}.print-content{position:relative;z-index:1} @media print{button{display:none}body{padding:0}.watermark{position:fixed;color:rgba(0,0,0,.10);print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="watermark">HUNGER STATION</div><div class="print-content"><h1 class="print-brand">HUNGER STATION</h1><h2>${esc(expiryReportTitle())}</h2><p>Products: ${list.length} · Printed: ${new Date().toLocaleString()}</p><button onclick="window.print()">Print</button><table><thead><tr><th>No.</th><th>Product</th><th>Barcode</th><th>SKU</th><th>Stock</th><th>Expiry Date</th><th>Status</th><th>Batch</th></tr></thead><tbody>${rows||'<tr><td colspan="8">No products found for this selection.</td></tr>'}</tbody></table></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);w.document.close();
+};
+$('expiryViewFilter').onchange=renderExpiry;$('expiryDays').onchange=renderExpiry;
+$('applyExpiryRangeBtn').onclick=()=>{const from=$('expiryFromDate').value,to=$('expiryToDate').value;if(!from||!to){toast('Please select both From date and To date.');return}if(from>to){toast('From date cannot be after To date.');return}renderExpiry();};
+$('clearExpiryRangeBtn').onclick=()=>{$('expiryFromDate').value='';$('expiryToDate').value='';renderExpiry();};
+$('backToProducts').onclick=()=>{closeNavPage();$('expiryPanel').classList.add('hidden')};
+
+// Product Pick List: keep selections and search state when navigating away or reopening the page.
+let pickListSelected = new Set();
+function pickListStorageKey(){return 'stock-expiry-picklist-v1-'+(cloudSession&&cloudSession.user&&cloudSession.user.id?cloudSession.user.id:'local');}
+function savePickListState(){try{localStorage.setItem(pickListStorageKey(),JSON.stringify({selected:[...pickListSelected],query:$('pickListSearch')?.value||''}));}catch(e){console.warn('Pick List state could not be saved',e);}}
+function loadPickListState(){try{const raw=localStorage.getItem(pickListStorageKey());if(!raw)return;const state=JSON.parse(raw);if(Array.isArray(state.selected))pickListSelected=new Set(state.selected.map(String));}catch(e){console.warn('Pick List state could not be restored',e);}}
+function renderPickList(){
+ const root=$('pickListResults'); if(!root)return;
+ const q=($('pickListSearch').value||'').trim().toLowerCase();
+ root.innerHTML='';
+ const selectedRoot=$('pickListSelectedResults');
+ if(selectedRoot){
+   selectedRoot.innerHTML='';
+   const chosen=products.filter(p=>pickListSelected.has(String(p.id))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+   if(!chosen.length) selectedRoot.innerHTML='<div class="empty">No products selected yet.</div>';
+   chosen.forEach(p=>{
+     const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #214664;border-radius:12px;background:#0a213b';
+     const details=document.createElement('span');details.style.flex='1';
+     const name=document.createElement('strong');name.textContent=p.name||'Unnamed product';name.style.display='block';
+     const meta=document.createElement('small');meta.style.cssText='display:block;color:#a9c2dc;margin-top:4px';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'} · Stock: ${Number(p.stock)||0} · Expiry: ${p.expiry||'Not set'}`;
+     const remove=document.createElement('button');remove.type='button';remove.className='btn-secondary';remove.textContent='Remove';remove.onclick=()=>{pickListSelected.delete(String(p.id));savePickListState();renderPickList();};
+     details.append(name,meta);row.append(details,remove);selectedRoot.append(row);
+   });
+ }
+ if(!q){
+   $('pickListCount').textContent=`${pickListSelected.size} selected`;
+   root.innerHTML='<div class="empty">Search for a product, then select it to add it to your list.</div>';
+   return;
+ }
+ const found=products.filter(p=>[p.name,p.barcode,p.sku,p.batch].some(v=>String(v||'').toLowerCase().includes(q)))
+   .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+ $('pickListCount').textContent=`${found.length} search results · ${pickListSelected.size} selected`;
+ if(!found.length){root.innerHTML='<div class="empty">No matching products found.</div>';return;}
+ found.forEach(p=>{
+   const row=document.createElement('label');
+   row.style.cssText='display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #214664;border-radius:12px;background:#0a213b;cursor:pointer';
+   const cb=document.createElement('input');cb.type='checkbox';cb.checked=pickListSelected.has(String(p.id));cb.style.cssText='width:20px;height:20px;flex-shrink:0;accent-color:#00cbb8';
+   cb.addEventListener('change',()=>{const id=String(p.id);if(cb.checked)pickListSelected.add(id);else pickListSelected.delete(id);savePickListState();$('pickListCount').textContent=`${found.length} products found · ${pickListSelected.size} selected`;});
+   const details=document.createElement('span');details.style.flex='1';
+   const name=document.createElement('strong');name.textContent=p.name||'Unnamed product';name.style.display='block';
+   const meta=document.createElement('small');meta.style.cssText='display:block;color:#a9c2dc;margin-top:4px';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'} · Stock: ${Number(p.stock)||0} · Expiry: ${p.expiry||'Not set'}`;
+   details.append(name,meta);row.append(cb,details);root.append(row);
+ });
+}
+function openPickList(){
+ const html=`<div class="panel" style="margin-top:0"><h2>☑ Product Search & Print List</h2><p class="notice">Search by product name, barcode, SKU, or batch. Select only the products you want to include, then print the selected list.</p><input id="pickListSearch" class="input" type="search" placeholder="Search products, barcode, or SKU"><div class="form-actions"><button type="button" id="pickListSelectVisible" class="btn-secondary">Select Search Results</button><button type="button" id="pickListClear" class="btn-secondary">Clear Selection</button></div><div id="pickListCount" class="notice" style="margin:12px 0"></div><div id="pickListResults" class="product-list"></div><h3 style="margin-top:18px">Selected Products</h3><div id="pickListSelectedResults" class="product-list"></div><div class="form-actions"><button type="button" id="pickListPrint">🖨️ Print Selected Products</button></div></div>`;
+ loadPickListState();
+ openNavPage('Pick List',[],'navPickList');navPageContent.innerHTML=html;
+ $('pickListSearch').addEventListener('input',()=>{savePickListState();renderPickList();});
+ $('pickListSelectVisible').onclick=()=>{const q=$('pickListSearch').value.trim().toLowerCase();if(!q){toast('Search for a product first.');return;}products.filter(p=>[p.name,p.barcode,p.sku,p.batch].some(v=>String(v||'').toLowerCase().includes(q))).forEach(p=>pickListSelected.add(String(p.id)));savePickListState();renderPickList();};
+ $('pickListClear').onclick=()=>{if(!confirm('Clear all selected products from the Pick List?'))return;pickListSelected.clear();savePickListState();renderPickList();};
+ $('pickListPrint').onclick=()=>{
+   savePickListState();
+   const list=products.filter(p=>pickListSelected.has(String(p.id))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+   if(!list.length){toast('Select at least one product to print.');return;}
+   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+   const rows=list.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}</td><td>${esc(p.barcode||'—')}</td><td>${esc(p.sku||'—')}</td><td>${esc(Number(p.stock)||0)}</td><td>${esc(p.expiry||'—')}</td><td>${esc(p.batch||'—')}</td></tr>`).join('');
+   const w=window.open('','_blank');if(!w){toast('Allow pop-ups to print this list.');return;}
+   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Selected Product List</title><style>*{font-weight:800!important;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:20px;color:#111;position:relative}.print-brand{font-size:34px;font-weight:900!important;letter-spacing:1.2px;text-align:left;margin:0 0 16px;color:#000}h2{margin-bottom:5px}p{color:#222}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1.5px solid #555;padding:7px;text-align:left}th{background:#eee}.watermark{position:fixed;z-index:0;pointer-events:none;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-32deg);font-size:clamp(38px,8vw,90px);font-weight:900!important;letter-spacing:3px;color:rgba(0,0,0,.09);white-space:nowrap;width:100%;text-align:center}.print-content{position:relative;z-index:1}@media print{button{display:none}body{padding:0}.watermark{position:fixed;color:rgba(0,0,0,.10);print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+/* Professional enterprise inventory UI refinement */
+:root{
+ --bg:#07111f;--panel:#0d1d30;--panel2:#122941;--line:#263f5b;
+ --text:#edf4fc;--muted:#9fb2c9;--teal:#4dd8c7;--green:#27c99a;
+ --amber:#f4b44f;--red:#f16a7b;--blue:#5aa9f5;
+}
+html{scroll-behavior:smooth}
+body{
+ background:
+  radial-gradient(ellipse at 12% -8%,rgba(48,104,168,.16),transparent 36%),
+  radial-gradient(ellipse at 95% 10%,rgba(32,176,161,.09),transparent 28%),
+  linear-gradient(160deg,#07111f 0%,#0a1929 55%,#07111f 100%);
+ color:var(--text);letter-spacing:.08px;
+}
+header{
+ background:rgba(7,18,32,.94);
+ border-bottom:1px solid rgba(130,166,205,.18);
+ box-shadow:0 8px 28px rgba(0,0,0,.16);
+ backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.panel{
+ background:linear-gradient(155deg,rgba(17,39,63,.97),rgba(10,27,45,.98));
+ border:1px solid rgba(122,161,201,.19);
+ border-radius:18px;
+ box-shadow:0 10px 28px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.stat{
+ border:1px solid rgba(255,255,255,.13);
+ border-radius:17px;
+ box-shadow:0 8px 22px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.1);
+ transition:transform .18s ease,box-shadow .18s ease;
+}
+@media(hover:hover){.stat:hover{transform:translateY(-2px);box-shadow:0 13px 28px #0003}}
+.s-blue{background:linear-gradient(135deg,#236eae,#174674 85%)}
+.s-green{background:linear-gradient(135deg,#148d76,#0b5a50 85%)}
+.s-amber{background:linear-gradient(135deg,#bd812a,#79501f 90%)}
+.s-red{background:linear-gradient(135deg,#bb455c,#792c42 90%)}
+.s-slate{background:linear-gradient(135deg,#455f7b,#2b4058 90%)}
+.product{
+ background:linear-gradient(140deg,rgba(18,42,66,.98),rgba(11,29,48,.99));
+ border:1px solid rgba(117,159,198,.2);border-radius:14px;
+ box-shadow:0 5px 15px rgba(0,0,0,.11);
+ transition:border-color .18s ease,transform .18s ease;
+}
+@media(hover:hover){.product:hover{border-color:rgba(77,216,199,.42);transform:translateY(-1px)}}
+.input,select,textarea{
+ background:#081727;color:var(--text);
+ border:1px solid #304a66;border-radius:11px;
+ transition:border-color .15s,box-shadow .15s;
+}
+.input:focus,select:focus,textarea:focus{
+ outline:none;border-color:#4dd8c7;
+ box-shadow:0 0 0 3px rgba(77,216,199,.12);
+}
+button{
+ background:linear-gradient(135deg,#35cdbb,#229e9b);
+ color:#041b24;border:1px solid rgba(119,244,226,.28);
+ border-radius:11px;font-weight:700;
+ box-shadow:0 3px 10px rgba(21,174,160,.10);
+ transition:filter .15s,transform .15s,box-shadow .15s;
+}
+button:hover{filter:brightness(1.06);box-shadow:0 5px 14px rgba(21,174,160,.15)}
+button:active{transform:translateY(1px)}
+.btn-secondary{
+ background:linear-gradient(145deg,#1b3651,#142b42);
+ color:#dce9f8;border:1px solid #34516f;box-shadow:none;
+}
+.bottom{
+ background:rgba(5,15,27,.96);border-top:1px solid rgba(115,153,191,.2);
+ box-shadow:0 -8px 24px rgba(0,0,0,.18);
+ backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.bottom button{box-shadow:none;border:1px solid transparent;background:transparent;color:#91a8c1}
+.bottom button.active{
+ color:#67e4d5;background:rgba(49,184,170,.10);
+ border-color:rgba(77,216,199,.15);text-shadow:none;
+}
+.pill{border:1px solid rgba(255,255,255,.12);box-shadow:none}
+h1,h2,h3{letter-spacing:-.25px}
+.notice{border-radius:12px}
+:focus-visible{outline:2px solid #5ce0d0;outline-offset:2px}
+@media(min-width:700px){
+ .wrap{max-width:1180px;margin-inline:auto;padding:24px}
+ .panel{padding:22px;border-radius:20px}
+ .stat{padding:20px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
+</style></head><body><div class="watermark">HUNGER STATION</div><div class="print-content"><h1 class="print-brand">HUNGER STATION</h1><h2>Selected Product List</h2><p>Total selected: ${list.length} · Printed: ${new Date().toLocaleString()}</p><button onclick="window.print()">Print</button><table><thead><tr><th>No.</th><th>Product Name</th><th>Barcode</th><th>SKU</th><th>Stock</th><th>Expiry Date</th><th>Batch</th></tr></thead><tbody>${rows}</tbody></table></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);w.document.close();
+ };
+ renderPickList();
+}
+$('navPickList').onclick=openPickList;
+
+$('navReport').onclick=()=>openNavPage('Reports',[$('reportPanel'),$('skuImportPanel')],'navReport');
+$('navScan').onclick=()=>{openNavPage('Barcode Scanner',[$('scannerPanel')],'navScan');$('scanInput').focus()};
+
+// Supabase cloud sync. The browser stores only the public project URL/key; authentication is handled by Supabase.
+const CONFIG_KEY='allItemsSupabaseConfig.v1';
+// Public client configuration is bundled so every device can use the same hosted app without re-entering URL/key.
+const DEFAULT_CLOUD_CONFIG={url:'https://xjspawizazyabdxttcay.supabase.co',key:'sb_publishable__kn5gfUctxW5AhqzUDOkxA_XTQZdARN'};
+let cloudClient=null, cloudSession=null, cloudBusy=false, cloudClearing=false, adminPanelOpen=false;
+function setCloudStatus(message){const el=$('cloudStatus');if(el)el.textContent=message;}
+function getConfig(){try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null')||DEFAULT_CLOUD_CONFIG}catch{return DEFAULT_CLOUD_CONFIG}}
+function updateConnectionSettingsUI(){const cfg=getConfig();const saved=!!(cfg&&cfg.url&&cfg.key);$('connectionSettings').classList.toggle('hidden',saved);$('changeCloudConfig').classList.toggle('hidden',!saved);if(saved){$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;}}
+$('changeCloudConfig').onclick=()=>{$('connectionSettings').classList.remove('hidden');$('changeCloudConfig').classList.add('hidden');setCloudStatus('Update the URL/key only if your Supabase project connection has changed.');};
+function initCloudClient(){
+ const cfg=getConfig();
+ if(!cfg||!cfg.url||!cfg.key){cloudClient=null;updateConnectionSettingsUI();return false}
+ if(!window.supabase||!window.supabase.createClient){setCloudStatus('Supabase library could not load. Connect to the internet and reopen this file.');return false}
+ try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'all-items-stock-expiry-auth-v1'}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
+}
+function toCloud(p,owner){return {id:String(p.id),owner_id:owner,name:String(p.name||''),barcode:String(p.barcode||''),sku:String(p.sku||''),stock:Math.max(0,Number(p.stock)||0),min_stock:Math.max(0,Number(p.minStock)||0),expiry:p.expiry||null,batch:String(p.batch||''),notes:String(p.notes||''),updated_at:new Date().toISOString()}}
+function fromCloud(r){return {id:String(r.id),name:r.name||'',barcode:r.barcode||'',sku:r.sku||'',stock:Number(r.stock)||0,minStock:Number(r.min_stock)||0,expiry:r.expiry||'',batch:r.batch||'',notes:r.notes||'',createdAt:r.created_at||r.updated_at||new Date().toISOString()}}
+async function fetchCloudProducts(){
+ if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
+ // Supabase/PostgREST normally returns only a limited page (often 1,000 rows); fetch all pages.
+ const all=[];const pageSize=1000;let from=0;
+ while(true){const {data,error}=await cloudClient.from('products').select('*').eq('owner_id',cloudSession.user.id).order('name').range(from,from+pageSize-1);if(error)throw error;const page=data||[];all.push(...page);if(page.length<pageSize)break;from+=pageSize;}
+ return all;
+}
+let syncRequested=false;
+async function syncProducts(){
+ if(!cloudClient||!cloudSession||cloudClearing)return;
+ // If a change happens during a sync, schedule another pass instead of silently dropping it.
+ if(cloudBusy){syncRequested=true;return;}
+ cloudBusy=true;
+ try{
+  do{
+   syncRequested=false;
+   const rows=products.map(p=>toCloud(p,cloudSession.user.id));
+   for(let i=0;i<rows.length;i+=250){const {error}=await cloudClient.from('products').upsert(rows.slice(i,i+250),{onConflict:'owner_id,id'});if(error)throw error;}
+  }while(syncRequested && cloudClient && cloudSession);
+  setCloudStatus('Connected · last sync '+new Date().toLocaleTimeString());
+ }finally{cloudBusy=false;}
+}
+async function deleteCloudProduct(id){if(!cloudClient||!cloudSession)return;const {error}=await cloudClient.from('products').delete().eq('owner_id',cloudSession.user.id).eq('id',String(id));if(error)throw error;setCloudStatus('Connected · deletion synced.');}
+async function restoreCloudSafely(){
+ // Strict account isolation: cloud is the source of truth after login.
+ // Never merge anonymous, legacy, or another account's local products into this user's cloud data.
+ if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
+ const accountId=cloudSession.user.id;
+ switchUserStorage(accountId);
+ const remoteRows=await fetchCloudProducts();
+ // Fetch succeeded: replace only this account's local cache with this account's cloud rows.
+ products=remoteRows.map(fromCloud);
+ safeCacheProducts();
+ render();
+ if(remoteRows.length){setCloudStatus(`Connected · loaded ${remoteRows.length} product(s) for this account.`);}
+ else {setCloudStatus("Connected. This account has no cloud products yet. Other accounts' products were not loaded.");}
+}
+
+async function updateAuthUI(){
+ if(!initCloudClient()){$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');return;}
+ const {data,error}=await cloudClient.auth.getSession();
+ if(error){setCloudStatus('Session check failed: '+error.message);$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');return;}
+ cloudSession=data.session;
+ if(cloudSession){
+  // Keep the Supabase session across short idle periods and browser reopen; only explicit Log Out clears it.
+  switchUserStorage(cloudSession.user.id);
+  // Authentication success should unlock the app even if the products table is not ready.
+  document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
+  try{await restoreCloudSafely();}
+  catch(e){console.error(e);setCloudStatus('Logged in, but cloud data could not load: '+(e.message||'check products table and RLS policies')+'. Local data is preserved.');}
+ } else {$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');}
+}
+$('saveCloudConfig').onclick=()=>{
+ const url=$('sbUrl').value.trim().replace(/\/$/,''),key=$('sbKey').value.trim();
+ if(!/^https?:\/\//i.test(url)||!key){setCloudStatus('Enter a valid Supabase Project URL and Publishable/anon key.');return;}
+ try{localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));if(initCloudClient()){updateConnectionSettingsUI();setCloudStatus('Connection settings saved on this device. Next time, only enter your email and password.');toast('Cloud connection settings saved.');}else setCloudStatus('Could not initialize Supabase.');}catch(e){setCloudStatus('Could not save connection settings in this browser.');}
+};
+$('cloudLogin').onclick=async()=>{
+ const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
+ if(!initCloudClient()){setCloudStatus('Supabase library/config could not start. Check internet, Project URL and Publishable/anon key.');return;}
+ if(!email||!password){setCloudStatus('Enter your Supabase Auth email and password.');return;}
+ const btn=$('cloudLogin');btn.disabled=true;setCloudStatus('Checking Supabase login…');
+ try{
+  const {data,error}=await cloudClient.auth.signInWithPassword({email,password});if(error)throw error;
+  cloudSession=data.session;
+  if(!cloudSession)throw Error('Supabase did not return a login session.');
+  switchUserStorage(cloudSession.user.id);
+  // Finish login first; a table/RLS issue should not make a valid login appear broken.
+  document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
+  setCloudStatus('Login successful. Loading cloud products…');
+  try{await restoreCloudSafely();toast('Login successful.');}
+  catch(syncError){console.error(syncError);setCloudStatus('Login successful, but cloud sync failed: '+(syncError.message||'check products table and RLS policies')+'. Local data is preserved.');toast('Logged in; cloud sync needs setup.');}
+ }catch(e){console.error(e);setCloudStatus('Login failed: '+(e.message||'check email, password, Project URL and Publishable/anon key')+'.');}
+ finally{btn.disabled=false;}
+};
+$('navAdmin').onclick=async()=>{
+ adminPanelOpen=true;
+ // Refresh the session directly from Supabase to avoid stale session state on mobile browsers.
+ if(!cloudClient){initCloudClient();}
+ if(!cloudClient){setCloudStatus('Supabase connection could not start. Check your internet connection and reload the website.');$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');return;}
+ try{
+  const {data,error}=await cloudClient.auth.getSession();
+  if(error)throw error;
+  cloudSession=data.session;
+  if(!cloudSession){adminPanelOpen=false;setCloudStatus('Log in and sync with your Supabase email and password before opening Admin.');$('adminOverlay').classList.add('hidden');$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');$('cloudEmail').focus();return;}
+  switchUserStorage(cloudSession.user.id);
+  const userEmail=cloudSession.user&&cloudSession.user.email?cloudSession.user.email:'Connected Supabase account';
+  $('adminAccountInfo').textContent='Logged in as: '+userEmail+'. You can log out separately from here.';
+  const cfg=getConfig(); $('adminSbUrl').value=cfg?.url||''; $('adminSbKey').value=cfg?.key||''; $('adminCloudEmail').value=userEmail==='Connected Supabase account'?'':userEmail; $('adminSyncStatus').textContent='Current cloud connection is ready.';
+  $('adminOverlay').classList.remove('hidden');
+ }catch(e){console.error(e);setCloudStatus('Could not open Admin: '+(e.message||'Supabase session check failed'));$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');}
+};
+$('adminSaveSync').onclick=async()=>{
+ const url=$('adminSbUrl').value.trim().replace(/\/$/,''), key=$('adminSbKey').value.trim(), email=$('adminCloudEmail').value.trim(), password=$('adminCloudPassword').value;
+ const status=$('adminSyncStatus');
+ if(!/^https:\/\//i.test(url)||!key){status.textContent='Enter a valid Project URL and Publishable/anon key.';return;}
+ if(!email||!password){status.textContent='Enter your Supabase email and password to start cloud sync.';return;}
+ const btn=$('adminSaveSync');btn.disabled=true;status.textContent='Settings save  cloud connection   …';
+ try{
+  localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));
+  if(cloudClient){try{await cloudClient.auth.signOut()}catch(e){}}
+  cloudSession=null; cloudClient=null;
+  if(!initCloudClient())throw Error('Could not initialize the Supabase client. Check the URL/key.');
+  const {data,error}=await cloudClient.auth.signInWithPassword({email,password});if(error)throw error;
+  cloudSession=data.session;
+  if(!cloudSession)throw Error('Supabase did not return a login session.');
+  switchUserStorage(cloudSession.user.id);
+  await restoreCloudSafely();
+  document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');
+  status.textContent='Success! Settings saved and cloud sync completed.';setCloudStatus('Connected · Admin settings saved and cloud sync completed.');toast('Cloud settings saved and synced.');
+ }catch(e){console.error(e);status.textContent='Sync failed: '+(e.message||'URL/key, login, products table  RLS policy  ।');setCloudStatus(status.textContent);}
+ finally{btn.disabled=false;}
+};
+$('closeAdmin').onclick=()=>{adminPanelOpen=false;$('adminOverlay').classList.add('hidden')};
+$('logoutBtn').onclick=async()=>{
+ adminPanelOpen=false;
+ $('adminOverlay').classList.add('hidden');
+ $('adminCloudPassword').value='';
+ const btn=$('logoutBtn');btn.disabled=true;
+ try{
+  if(cloudClient){const {error}=await cloudClient.auth.signOut({scope:'local'});if(error)throw error;}
+  cloudSession=null;adminLoggedIn=false;switchUserStorage(null);products=[];render();
+  document.body.classList.add('auth-locked');
+  $('headerLogout').classList.add('hidden');
+  $('authOverlay').classList.remove('hidden');
+  $('cloudPassword').value='';
+  setCloudStatus('Logged out from this device. Cloud product data was not deleted.');
+ }catch(e){
+  console.error(e);
+  // Even if remote sign-out errors, close the Admin panel and return to login.
+  cloudSession=null;adminLoggedIn=false;switchUserStorage(null);products=[];render();
+  document.body.classList.add('auth-locked');
+  $('headerLogout').classList.add('hidden');
+  $('authOverlay').classList.remove('hidden');
+  setCloudStatus('Logged out on this device, but Supabase sign-out could not be confirmed: '+(e.message||'Please reload and check connection.'));
+ }finally{btn.disabled=false;}
+};
+$('headerLogout').onclick=()=> $('logoutBtn').click();
+// Keep the password-protected resetBtn handler above; do not override it here.
+// Keep the local cache and render immediately; cloud fetch only occurs after successful auth.
+load();render();
+updateConnectionSettingsUI();
+initCloudClient();
+if(cloudClient){cloudClient.auth.onAuthStateChange((event,session)=>{
+ cloudSession=session;
+ if(session && session.user) switchUserStorage(session.user.id);
+ // The login/startup flow handles session restoration. Avoid duplicate concurrent cloud restores here.
+ if(!session&&event==='SIGNED_OUT'){
+  switchUserStorage(null);products=[];render();
+  adminPanelOpen=false;adminLoggedIn=false;
+  $('adminOverlay').classList.add('hidden');
+  $('authOverlay').classList.remove('hidden');
+  $('cloudPassword').value='';$('adminCloudPassword').value='';
+  document.body.classList.add('auth-locked');
+  $('headerLogout').classList.add('hidden');
+ }
+});}
+updateAuthUI().catch(e=>{console.error(e);setCloudStatus('Could not initialize cloud session. Local data is preserved.');});
+// Refresh the account's cloud data when the user returns to this tab/device.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudClient&&cloudSession){restoreCloudSafely().catch(e=>{console.error(e);setCloudStatus('Cloud refresh failed; local data is preserved.');});}});
+
+
+// Theme preference is stored on this device and does not affect cloud data.
+(function(){
+ const body=document.body, btn=document.getElementById('themeToggle'), meta=document.getElementById('appThemeColor');
+ function applyTheme(theme){const light=theme==='light';body.classList.toggle('light-theme',light);if(btn){btn.textContent=light?'🌙 Dark':'☀️ Light';btn.setAttribute('aria-label',light?'Switch to dark mode':'Switch to light mode');}if(meta)meta.setAttribute('content',light?'#f1f5f9':'#061a31');}
+ let saved='dark';try{saved=localStorage.getItem('stock-expiry-theme-v1')||'dark';}catch(e){}
+ applyTheme(saved);
+ if(btn)btn.addEventListener('click',()=>{const next=body.classList.contains('light-theme')?'dark':'light';applyTheme(next);try{localStorage.setItem('stock-expiry-theme-v1',next);}catch(e){}});
+})();
+
+// Progressive Web App installation. This becomes available when hosted on HTTPS (or localhost).
+(function(){
+ let deferredPrompt=null;const installBtn=document.getElementById('installApp');
+ const standalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+ if(standalone()&&installBtn){installBtn.classList.add('hidden');}
+ window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredPrompt=event;if(installBtn)installBtn.classList.remove('hidden');});
+ if(installBtn)installBtn.addEventListener('click',async()=>{
+   if(deferredPrompt){deferredPrompt.prompt();try{await deferredPrompt.userChoice;}catch(e){}deferredPrompt=null;installBtn.classList.add('hidden');return;}
+   alert('To install: open this site in Chrome menu (⋮) and choose “Install app” or “Add to Home screen”. The website must be hosted on HTTPS.');
+ });
+ window.addEventListener('appinstalled',()=>{if(installBtn)installBtn.classList.add('hidden');});
+ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
+   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline support registration failed:',err)));
+ }
+})();
+
+</script>
+</body></html>
