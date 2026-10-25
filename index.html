@@ -355,6 +355,8 @@ function persist(){const cached=safeCacheProducts();if(cloudSession&&cloudClient
 function expiryISO(date){if(!date)return'';const s=String(date).trim();let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m){const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);if(mo>=1&&mo<=12&&d>=1&&d<=31)return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');return'';}m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m){let a=Number(m[1]),b=Number(m[2]),y=Number(m[3]);let mo=a>12?b:a,day=a>12?a:(b>12?b:a);if(a<=12&&b<=12){day=a;mo=b;}if(mo>=1&&mo<=12&&day>=1&&day<=31)return y+'-'+String(mo).padStart(2,'0')+'-'+String(day).padStart(2,'0');}return'';}
 function daysTo(date){const iso=expiryISO(date);if(!iso)return null;const m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);const a=new Date();a.setHours(0,0,0,0);const b=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
 function expiresWithin30Days(p){const d=daysTo(p?.expiry);return d!==null&&d>=0&&d<=30}
+function isExpiredWithStock(p){const d=daysTo(p?.expiry);return Number(p?.stock)>0&&d!==null&&d<0}
+function needsExpiryHighlight(p){return isExpiredWithStock(p)||expiresWithin30Days(p)}
 function isExpiredWithStock(p){const d=daysTo(expiryISO(p?.expiry));return Number(p?.stock)>0&&d!==null&&d<0}
 function needsExpiryHighlight(p){return isExpiredWithStock(p)||expiresWithin30Days(p)}
 function status(p){if(Number(p.stock)<=0)return'out';const d=daysTo(p.expiry);if(d!==null&&d<0)return'expired';if(d!==null&&d<=30)return'near';return'ok'}
@@ -439,13 +441,13 @@ function render(){
  // Keep the interface responsive for very large catalogs; all records remain searchable and stored.
  const DISPLAY_LIMIT=500;
  if(list.length>DISPLAY_LIMIT){const note=document.createElement('div');note.className='notice';note.textContent=`Showing first ${DISPLAY_LIMIT.toLocaleString()} of ${list.length.toLocaleString()} matching products. Use Search to narrow the list.`;root.append(note);list=list.slice(0,DISPLAY_LIMIT)}
- list.forEach(p=>{const s=status(p),low=Number(p.stock)>0&&Number(p.stock)<=Number(p.minStock||0),expiryHighlight=needsExpiryHighlight(p);
- const card=document.createElement('article');card.className='product'+(s==='expired'?' expired-glow':expiryHighlight?' expiring-month':'');
+ list.forEach(p=>{const s=status(p),low=Number(p.stock)>0&&Number(p.stock)<=Number(p.minStock||0),expiryHighlight=needsExpiryHighlight(p),expiredHighlight=isExpiredWithStock(p);
+ const card=document.createElement('article');card.className='product'+(expiredHighlight?' expired-glow':expiryHighlight?' expiring-month':'');
  const left=document.createElement('div');const visualRow=document.createElement('div');visualRow.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap";const im=document.createElement('img');im.alt=p.name+" product image";im.loading="lazy";im.style.cssText="width:76px;height:76px;object-fit:contain;background:#fff;border-radius:12px;padding:4px;flex-shrink:0";if(p.image_url){im.src=p.image_url;im.onerror=()=>{im.style.display="none"}}else{im.src="";im.style.display="none"}visualRow.append(im);left.append(visualRow);const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
  const meta=document.createElement('div');meta.className='meta';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'}`;left.append(meta);
  const tags=document.createElement('div');tags.className='pills';const pill=document.createElement('span');pill.className='pill '+s; pill.textContent=statusLabel(s);tags.append(pill);
  if(low){const lp=document.createElement('span');lp.className='pill near';lp.textContent='Low Stock';tags.append(lp)}
- if(expiresWithinMonth){const mp=document.createElement('span');mp.className='pill expiring-month-pill';mp.textContent='⚠ Expires within 30 days';tags.append(mp)}
+ if(s==='expired'){const mp=document.createElement('span');mp.className='pill expired';mp.textContent='🚨 EXPIRED';tags.append(mp)}else if(expiresWithinMonth){const mp=document.createElement('span');mp.className='pill expiring-month-pill';mp.textContent='⚠ Expires within 30 days';tags.append(mp)}
  const exp=document.createElement('div');exp.className='meta'+(expiresWithinMonth?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(tags,exp);
  const visibleNotes=cleanProductNotes(p.notes);if(p.batch||visibleNotes){const nt=document.createElement('div');nt.className='meta';nt.textContent=[p.batch?'Batch: '+p.batch:'',visibleNotes].filter(Boolean).join(' · ');left.append(nt)}
  const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);const history=Array.isArray(p.stockHistory)?p.stockHistory:[];const lastChange=history.length?history[history.length-1]:null;if(lastChange){const before=Number(lastChange.before)||0,after=Number(lastChange.after)||0,delta=after-before;if(delta!==0){const adj=document.createElement('small');adj.textContent=(delta>0?'+':'−')+Math.abs(delta).toLocaleString();adj.title=delta>0?'Stock added':'Stock removed';adj.style.cssText='display:block;font-size:11px;font-weight:700;color:'+(delta>0?'#16a34a':'#f59e0b')+';margin-top:3px;white-space:nowrap';qty.append(adj);}}const actions=document.createElement('div');actions.className='actions';
@@ -462,7 +464,7 @@ function render(){
 }
 function openStatDetail(kind){
  const titles={products:'Total Products',stock:'Total Stock',near:'Near Expiry',expired:'Expired Products',out:'Out of Stock'};
- const descriptions={products:'All products saved in this account.',stock:'Products with available stock.',near:'Products expiring within the next 7 days.',expired:'Products whose expiry date has passed.',out:'Products with zero stock.'};
+ const descriptions={products:'All products saved in this account.',stock:'Products with available stock.',near:'Products expiring within the next 30 days.',expired:'Products whose expiry date has passed and still have stock.',out:'Products with zero stock.'};
  let list=products.slice();
  if(kind==='stock') list=list.filter(p=>Number(p.stock)>0);
  else if(['near','expired','out'].includes(kind)) list=list.filter(p=>status(p)===kind);
@@ -472,12 +474,12 @@ function openStatDetail(kind){
  const root=$('detailProductList');root.innerHTML='';
  if(!list.length){root.innerHTML='<div class="panel empty">No matching products found.</div>'}
  else list.forEach(p=>{
-   const isExpiring=expiresWithin30Days(p);
-   const card=document.createElement('article');card.className='product'+(isExpiring?' expiring-month':'');
+   const isExpiring=expiresWithin30Days(p),isExpired=isExpiredWithStock(p);
+   const card=document.createElement('article');card.className='product'+(isExpired?' expired-glow':isExpiring?' expiring-month':'');
    const left=document.createElement('div');const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
    const meta=document.createElement('div');meta.className='meta';meta.textContent='Barcode: '+(p.barcode||'—')+' · SKU: '+(p.sku||'—');left.append(meta);
    const tags=document.createElement('div');tags.className='pills';const pill=document.createElement('span');pill.className='pill '+status(p);pill.textContent=statusLabel(status(p));tags.append(pill);
-   if(isExpiring){const warn=document.createElement('span');warn.className='pill expiring-month-pill';warn.textContent='⚠ Expires within 30 days';tags.append(warn)}
+   if(isExpired){const warn=document.createElement('span');warn.className='pill expired';warn.textContent='🚨 EXPIRED';tags.append(warn)}else if(isExpiring){const warn=document.createElement('span');warn.className='pill expiring-month-pill';warn.textContent='⚠ Expires within 30 days';tags.append(warn)}
    left.append(tags);
    const exp=document.createElement('div');exp.className='meta'+(isExpiring?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(exp);
    const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);
@@ -938,7 +940,7 @@ function renderExpiry(){
    root.innerHTML='<div class="empty">Please correct the date range.</div>';
    return;
  }
- list=products.filter(p=>{if(Number(p.stock)<=0)return false;const iso=expiryISO(p.expiry);if(!iso)return false;if(range.mode==='quick'){const d=daysTo(iso);return d!==null&&d<=Number(range.days||30);}return iso>=from&&iso<=to;})
+ list=products.filter(p=>{if(Number(p.stock)<=0)return false;const iso=expiryISO(p.expiry);if(!iso)return false;const d=daysTo(iso);if(d===null)return false;if(range.mode==='quick')return d<=Number(range.days||30);return (iso>=from&&iso<=to)||d<0;})
    .sort((a,b)=>expiryISO(a.expiry).localeCompare(expiryISO(b.expiry)));
  $('expirySummary').textContent=`${range.mode==='quick'?'Quick expiry alert (next '+range.days+' days)':'Custom expiry dates'} · ${from} to ${to}: ${list.length} products.`;
  if(!list.length){root.innerHTML='<div class="empty">No products with expiry dates in this range.</div>';return}
@@ -1314,7 +1316,7 @@ async function updateAuthUI(){
   $('productList').innerHTML='<div class="panel empty">Loading products and stock from cloud. Please wait…</div>';
   document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
   try{await restoreCloudSafely();}
-  catch(e){console.error(e);switchUserStorage(cloudSession.user.id);render();setCloudStatus('Logged in, but cloud data could not load: '+(e.message||'check products table and RLS policies')+'. Local data is preserved.');}
+  catch(e){console.error('Cloud session/data initialization failed:',e);switchUserStorage(cloudSession.user.id);render();const detail=e&&e.message?e.message:'unknown Supabase error';setCloudStatus('Cloud session initialized but data could not load: '+detail+'. Check internet, Supabase project/key, products table, and RLS policies.');}
  } else {$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');}
 }
 $('saveCloudConfig').onclick=()=>{
