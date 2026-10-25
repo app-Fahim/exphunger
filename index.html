@@ -1187,9 +1187,14 @@ $('cloudLogin').onclick=async()=>{
   switchUserStorage(cloudSession.user.id);
   // Finish login first; a table/RLS issue should not make a valid login appear broken.
   document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
-  setCloudStatus('Login successful. Loading cloud products…');
-  try{await restoreCloudSafely();toast('Login successful.');}
-  catch(syncError){console.error(syncError);setCloudStatus('Login successful, but cloud sync failed: '+(syncError.message||'check products table and RLS policies')+'. Local data is preserved.');toast('Logged in; cloud sync needs setup.');}
+  setCloudStatus('Login successful. Loading cloud products in the background…');
+  toast('Login successful.');
+  // Let the login button finish immediately instead of waiting for every cloud row.
+  // The account's local cache is shown first; Supabase data replaces it when loaded.
+  restoreCloudSafely().catch(syncError=>{
+   console.error('Background cloud load failed:',syncError);
+   setCloudStatus('Login successful, but cloud data could not load: '+(syncError.message||'check products table and RLS policies')+'. Local data is preserved.');
+  });
  }catch(e){console.error(e);setCloudStatus('Login failed: '+(e.message||'check the Supabase account email, password, Project URL and Publishable/anon key')+'. If you entered a username instead of an email, use the account email.');}
  finally{btn.disabled=false;}
 };
