@@ -1277,7 +1277,7 @@ if(cloudClient){cloudClient.auth.onAuthStateChange((event,session)=>{
 });}
 updateAuthUI().catch(e=>{console.error(e);setCloudStatus('Could not initialize cloud session. Local data is preserved.');});
 // Refresh the account's cloud data when the user returns to this tab/device.
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudClient&&cloudSession&&!cloudBusy){restoreCloudSafely().catch(e=>{console.error(e);setCloudStatus('Cloud refresh failed; local data is preserved.');});}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudClient&&cloudSession&&!cloudBusy){restoreCloudSafely().catch(e=>{console.error('Cloud refresh failed:',e);setCloudStatus('Cloud refresh failed: '+(e&&e.message?e.message:'unknown error')+'. Local data is preserved.');});}});
 
 
 // Make Enter work consistently for search, login, date filters, scanner, and product forms.
