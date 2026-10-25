@@ -252,7 +252,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <h2 id="formTitle">➕ Add New Product</h2>
 <form id="productForm">
 <div class="formgrid">
-<div class="field full"><label for="name">Product Name *</label><input class="input" id="name" required placeholder="e.g. Milk, Juice, Rice, or Biscuits"><div class="form-actions" style="margin-top:8px"><button type="button" class="btn-secondary" id="autoFindImageBtn">🔎 Find Product Image Automatically</button><button type="button" class="btn-secondary" id="uploadProductImageBtn">📷 Upload from Phone</button></div><input id="productImageFile" type="file" accept="image/*" capture="environment" class="hidden"><input id="productImageUrl" type="hidden"><div id="productImageStatus" class="notice" style="margin-top:8px">No product image selected yet.</div><div id="productImagePreview" style="margin-top:8px"></div></div>
+<div class="field full"><label for="name">Product Name *</label><input class="input" id="name" required placeholder="e.g. Milk, Juice, Rice, or Biscuits"><div class="form-actions" style="margin-top:8px"><button type="button" class="btn-secondary" id="autoFindImageBtn">🔎 Find Product Image Automatically</button><button type="button" class="btn-secondary" id="uploadProductImageBtn">📷 Upload from Phone</button><button type="button" class="btn-secondary" id="clearProductImageBtn">✖ Clear Photo</button></div><input id="productImageFile" type="file" accept="image/*" capture="environment" class="hidden"><input id="productImageUrl" type="hidden"><div id="productImageStatus" class="notice" style="margin-top:8px">No product image selected yet.</div><div id="productImagePreview" style="margin-top:8px"></div></div>
 <div class="field"><label for="barcode">Barcode (Optional)</label><input class="input" id="barcode" inputmode="numeric" placeholder="Barcode number"></div>
 <div class="field"><label for="sku">SKU / Item Code (Optional)</label><input class="input" id="sku" placeholder="SKU or item code"></div>
 <div class="field"><label for="stock">Current Stock (Packets) *</label><input class="input" id="stock" type="number" min="0" step="1" required value="0"></div>
@@ -422,6 +422,7 @@ async function findProductImage(){
 $('autoFindImageBtn').onclick=findProductImage;
 $('name').addEventListener('change',()=>{if(!$('productImageUrl').value.trim())findProductImage()});
 $('uploadProductImageBtn').onclick=()=>$('productImageFile').click();
+$('clearProductImageBtn').onclick=()=>{ $('productImageUrl').value=''; $('productImageFile').value=''; showProductImage(''); $('productImageStatus').textContent='Photo cleared. Save the product to remove its photo from cloud data.'; toast('Photo cleared. Save changes to apply it.'); };
 $('productImageFile').addEventListener('change',async e=>{
  const file=e.target.files&&e.target.files[0];if(!file)return;
  if(!file.type.startsWith('image/')){toast('Please choose an image file.');e.target.value='';return}
