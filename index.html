@@ -267,9 +267,9 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 </form>
 <div class="panel" id="skuImportPanel" style="margin-top:14px">
  <h3>📄 Upload SKU File</h3>
- <p class="notice">Upload an Excel (.xlsx, .xls) or CSV file. All worksheets and non-empty rows are processed. Product Name is detected automatically where possible; other columns are preserved in Notes. SKU, Barcode and Stock are optional. If Stock is missing, existing stock is kept.</p>
+ <p class="notice">Upload an Excel (.xlsx, .xls) or CSV file. All worksheets and non-empty rows are processed. Product Name is detected automatically where possible; other columns are preserved in Notes. SKU, Barcode, Stock and Expire/Expiry Date are optional. Missing columns will not stop the file import. If Stock is missing, existing stock is kept (or 0 for a new product).</p>
  <div class="form-actions" style="margin:10px 0"><button type="button" class="btn-secondary" id="skuSampleDownloadBtn">⬇️ Download Sample Excel</button><button type="button" class="btn-secondary" id="skuSampleCsvBtn">⬇️ Download Sample CSV</button></div>
- <div class="notice">Recommended columns: Product Name, SKU, Barcode, Stock, Expire. Only Product Name is required; other columns are optional. Use one product per row and keep the first row as the column headings. You can add your own columns too; their values are saved in Notes. Sample files below show the expected format.</div>
+ <div class="notice">Recommended columns: Product Name, SKU, Barcode, Stock, Expire. Only Product Name is required; SKU, Barcode, Stock and Expire are optional. The file will still import if any or all of those optional columns are missing. Use one product per row and keep the first row as the column headings. You can add your own columns too; their values are saved in Notes. Sample files below show the expected format.</div>
  <div class="field"><label for="skuImportFile">Choose SKU / product file</label><input class="input" id="skuImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></div>
  <div class="form-actions" style="margin-top:10px"><button type="button" id="skuImportBtn">Upload & Import SKU File</button><button type="button" class="btn-secondary" id="skuImportClearBtn">Clear File</button></div>
  <div class="notice" id="skuImportStatus" style="margin-top:10px">No file selected.</div>
@@ -544,7 +544,7 @@ $('skuImportBtn').addEventListener('click',async()=>{
    const barcode=String(skuCell(row,['Barcode','Bar Code','EAN','UPC','GTIN'])).trim();
    const stockRaw=skuCell(row,['Stock','Current Stock','Qty','Quantity','On Hand','Available Stock','Balance','Stock (Packets)']);
    const hasStock=stockRaw!==''&&stockRaw!==null&&stockRaw!==undefined&&Number.isFinite(Number(String(stockRaw).replace(/,/g,'')))&&Number(String(stockRaw).replace(/,/g,''))>=0;
-   const expiry=skuDateValue(skuCell(row,['Expiry Date','Expiry','Expiration Date','Best Before','Expire Date']));
+   const expiry=skuDateValue(skuCell(row,['Expiry Date','Expiry','Expiration Date','Best Before','Expire Date','Expire']));
    const minRaw=skuCell(row,['Minimum Stock','Min Stock','Low Stock Alert','Reorder Level']);
    let existing=(sku&&bySku.get(sku.toLowerCase()))||(barcode&&byBarcode.get(barcode))||null;
    if(existing&&usedExistingIds.has(String(existing.id)))existing=null;
