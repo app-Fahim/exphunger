@@ -566,11 +566,14 @@ async function resumePendingSkuImport(){
    setCloudStatus(`Uploading SKU file: ${i.toLocaleString()} / ${items.length.toLocaleString()}`);
   }
   const ids=items.map(p=>String(p.id));const foundIds=new Set();
-  for(let j=0;j<ids.length;j+=400){
-   const {data,error}=await cloudClient.from('products').select('id').eq('owner_id',queue.ownerId).in('id',ids.slice(j,j+400));
-   if(error)throw new Error('Upload finished but cloud verification failed: '+error.message);
+  // Keep verification requests small so long SKU uploads do not create oversized REST query URLs.
+  const verifyBatchSize=50;
+  for(let j=0;j<ids.length;j+=verifyBatchSize){
+   const batchIds=ids.slice(j,j+verifyBatchSize);
+   const {data,error}=await cloudClient.from('products').select('id').eq('owner_id',queue.ownerId).in('id',batchIds);
+   if(error)throw new Error('Upload finished but cloud verification failed near product '+(j+1)+': '+error.message);
    for(const row of data||[])foundIds.add(String(row.id));
-   if(out)out.textContent=`Verifying cloud save: ${Math.min(j+400,ids.length).toLocaleString()} / ${ids.length.toLocaleString()} products…`;
+   if(out)out.textContent=`Verifying cloud save: ${Math.min(j+verifyBatchSize,ids.length).toLocaleString()} / ${ids.length.toLocaleString()} products…`;
   }
   const missing=ids.filter(id=>!foundIds.has(id)).length;
   if(missing)throw new Error(`Cloud verification found ${missing} imported product(s) missing.`);
