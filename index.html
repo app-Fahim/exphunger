@@ -355,6 +355,8 @@ function persist(){const cached=safeCacheProducts();if(cloudSession&&cloudClient
 function expiryISO(date){if(!date)return'';const s=String(date).trim();let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m){const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);if(mo>=1&&mo<=12&&d>=1&&d<=31)return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');return'';}m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m){let a=Number(m[1]),b=Number(m[2]),y=Number(m[3]);let mo=a>12?b:a,day=a>12?a:(b>12?b:a);if(a<=12&&b<=12){day=a;mo=b;}if(mo>=1&&mo<=12&&day>=1&&day<=31)return y+'-'+String(mo).padStart(2,'0')+'-'+String(day).padStart(2,'0');}return'';}
 function daysTo(date){const iso=expiryISO(date);if(!iso)return null;const m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);const a=new Date();a.setHours(0,0,0,0);const b=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
 function expiresWithin30Days(p){const d=daysTo(p?.expiry);return d!==null&&d>=0&&d<=30}
+function isExpiredWithStock(p){const d=daysTo(expiryISO(p?.expiry));return Number(p?.stock)>0&&d!==null&&d<0}
+function needsExpiryHighlight(p){return isExpiredWithStock(p)||expiresWithin30Days(p)}
 function status(p){if(Number(p.stock)<=0)return'out';const d=daysTo(p.expiry);if(d!==null&&d<0)return'expired';if(d!==null&&d<=30)return'near';return'ok'}
 function statusLabel(s){return({ok:'In Stock',near:'Near Expiry',expired:'Expired',out:'Out of Stock'})[s]}
 function dateLabel(p){if(!p.expiry)return'Date not set';const d=daysTo(p.expiry);if(d<0)return`${p.expiry} · ${Math.abs(d)} days past expiry`;if(d===0)return`${p.expiry} · expires today`;return`${p.expiry} · ${d} days remaining`}
@@ -437,8 +439,8 @@ function render(){
  // Keep the interface responsive for very large catalogs; all records remain searchable and stored.
  const DISPLAY_LIMIT=500;
  if(list.length>DISPLAY_LIMIT){const note=document.createElement('div');note.className='notice';note.textContent=`Showing first ${DISPLAY_LIMIT.toLocaleString()} of ${list.length.toLocaleString()} matching products. Use Search to narrow the list.`;root.append(note);list=list.slice(0,DISPLAY_LIMIT)}
- list.forEach(p=>{const s=status(p),low=Number(p.stock)>0&&Number(p.stock)<=Number(p.minStock||0),expiresWithinMonth=expiresWithin30Days(p);
- const card=document.createElement('article');card.className='product'+(s==='expired'?' expired-glow':expiresWithinMonth?' expiring-month':'');
+ list.forEach(p=>{const s=status(p),low=Number(p.stock)>0&&Number(p.stock)<=Number(p.minStock||0),expiryHighlight=needsExpiryHighlight(p);
+ const card=document.createElement('article');card.className='product'+(s==='expired'?' expired-glow':expiryHighlight?' expiring-month':'');
  const left=document.createElement('div');const visualRow=document.createElement('div');visualRow.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap";const im=document.createElement('img');im.alt=p.name+" product image";im.loading="lazy";im.style.cssText="width:76px;height:76px;object-fit:contain;background:#fff;border-radius:12px;padding:4px;flex-shrink:0";if(p.image_url){im.src=p.image_url;im.onerror=()=>{im.style.display="none"}}else{im.src="";im.style.display="none"}visualRow.append(im);left.append(visualRow);const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
  const meta=document.createElement('div');meta.className='meta';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'}`;left.append(meta);
  const tags=document.createElement('div');tags.className='pills';const pill=document.createElement('span');pill.className='pill '+s; pill.textContent=statusLabel(s);tags.append(pill);
@@ -941,11 +943,11 @@ function renderExpiry(){
  $('expirySummary').textContent=`${range.mode==='quick'?'Quick expiry alert (next '+range.days+' days)':'Custom expiry dates'} · ${from} to ${to}: ${list.length} products.`;
  if(!list.length){root.innerHTML='<div class="empty">No products with expiry dates in this range.</div>';return}
  list.forEach(p=>{
-   const st=status(p),isExpiring=expiresWithin30Days(p),card=document.createElement('article');card.className='product'+(isExpiring?' expiring-month':'');
+   const st=status(p),isExpiring=expiresWithin30Days(p),isExpired=isExpiredWithStock(p),card=document.createElement('article');card.className='product'+(isExpired?' expired-glow':isExpiring?' expiring-month':'');
    const left=document.createElement('div'),name=document.createElement('div');name.className='pname';name.textContent=p.name;left.append(name);
    const meta=document.createElement('div');meta.className='meta';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'}`;left.append(meta);
    const pills=document.createElement('div');pills.className='pills';const pill=document.createElement('span');pill.className='pill '+st;pill.textContent=statusLabel(st);pills.append(pill);left.append(pills);
-   if(isExpiring){const warn=document.createElement('span');warn.className='pill expiring-month-pill';warn.textContent='⚠ Expires within 30 days';pills.append(warn)}
+   if(isExpired){const warn=document.createElement('span');warn.className='pill expired';warn.textContent='🚨 EXPIRED';pills.append(warn)}else if(isExpiring){const warn=document.createElement('span');warn.className='pill expiring-month-pill';warn.textContent='⚠ Expires within 30 days';pills.append(warn)}
    const exp=document.createElement('div');exp.className='meta'+(isExpiring?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(exp);
    const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);
    const actions=document.createElement('div');actions.className='actions';
