@@ -191,18 +191,11 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
   <section class="auth-card">
     <div style="font-size:38px">☁️</div>
     <h2>Cloud Sync Login</h2>
-    <p>Configure Supabase once. Log in with the same account on your phone and PC to access the same product data.</p>
-    <div id="connectionSettings">
-      <div class="field"><label for="sbUrl">Supabase Project URL</label><input class="input" id="sbUrl" placeholder="https://your-project.supabase.co" autocomplete="url"></div>
-      <div class="field"><label for="sbKey">Supabase Publishable / anon key</label><input class="input" id="sbKey" placeholder="sb_publishable_... or anon key" autocomplete="off"></div>
-      <div class="auth-buttons"><button id="saveCloudConfig">Save Connection</button></div>
-    </div>
-    <div class="auth-buttons"><button id="changeCloudConfig" class="auth-link hidden" type="button">Change connection settings</button></div>
+    <p>Log in with your Supabase account to access your product data.</p>
     <hr style="border-color:#214664;margin:18px 0">
     <div class="field"><label for="cloudEmail">Admin Email</label><input class="input" id="cloudEmail" type="email" autocomplete="username" placeholder="Your Supabase Auth email"></div>
     <div class="field"><label for="cloudPassword">Password</label><input class="input" id="cloudPassword" type="password" autocomplete="current-password" placeholder="Supabase account password"></div>
-    <div class="auth-buttons"><button id="cloudLogin">Log In & Sync</button></div>
-    <p class="auth-warning">Use only your Supabase Project URL and Publishable/anon key. Never enter a service_role or secret key here. Local data is preserved if cloud loading fails.</p>
+    <div class="auth-buttons"><button id="cloudLogin" type="button">Log In &amp; Sync</button></div>
     <p id="cloudStatus" class="notice" role="status"></p>
   </section>
 </div>
