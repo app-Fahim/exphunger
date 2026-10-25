@@ -285,7 +285,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 </div>
 <div class="section-title home-only-hidden">📋 Product List <span id="listCount" style="color:#9db5d1;font-size:12px"></span></div>
 <div class="product-list home-only-hidden" id="productList"></div>
-<div class="panel home-only-hidden" id="skuImportPanel"><h2>📥 Store SKU / Excel File Upload</h2><div class="form-actions"><button id="skuImportBtn" type="button">Choose SKU / Excel File</button><button id="templateBtn" class="btn-secondary" type="button">Sample CSV</button></div><input type="file" id="skuFile" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden"><div id="skuImportResult" class="notice" style="margin-top:10px"></div></div><div class="panel home-only-hidden" id="reportPanel"><h2>💾 Backup & Reports</h2><div class="form-actions"><button id="exportBtn">Export Excel/CSV</button><button id="backupBtn" class="btn-secondary">Backup JSON</button></div><div class="form-actions"><button id="importBtn" class="btn-secondary">Backup Import</button><button id="resetBtn" class="btn-red">Clear All Data</button></div><input type="file" id="importFile" accept=".json,application/json" class="hidden"><div class="notice" id="lastSkuUploadReport" style="margin-top:10px">Last SKU file upload: No upload recorded yet.</div><div class="form-actions" style="margin-top:10px"><button id="managerReportBtn" class="btn-secondary" type="button">Download Manager Report</button><button id="stockHistoryBtn" class="btn-secondary" type="button">View Stock History</button></div><div id="smartExpiryAlert" class="notice" style="margin-top:10px"></div><div id="stockHistoryPanel" class="panel hidden" style="margin-top:10px"><h3>Stock History</h3><div id="stockHistoryList" class="product-list"></div></div><p class="notice">Data is saved locally first and synced to Supabase when connected. Download backups regularly. Never use Clear All Data unless you intend to delete the cloud data too.</p></div>
+<div class="panel home-only-hidden" id="reportPanel"><h2>💾 Backup & Reports</h2><div class="form-actions"><button id="exportBtn">Export Excel/CSV</button><button id="backupBtn" class="btn-secondary">Backup JSON</button></div><div class="form-actions"><button id="importBtn" class="btn-secondary">Backup Import</button><button id="resetBtn" class="btn-red">Clear All Data</button></div><input type="file" id="importFile" accept=".json,application/json" class="hidden"><div class="notice" id="lastSkuUploadReport" style="margin-top:10px">Last SKU file upload: No upload recorded yet.</div><div class="form-actions" style="margin-top:10px"><button id="managerReportBtn" class="btn-secondary" type="button">Download Manager Report</button><button id="stockHistoryBtn" class="btn-secondary" type="button">View Stock History</button></div><div id="smartExpiryAlert" class="notice" style="margin-top:10px"></div><div id="stockHistoryPanel" class="panel hidden" style="margin-top:10px"><h3>Stock History</h3><div id="stockHistoryList" class="product-list"></div></div><p class="notice">Data is saved locally first and synced to Supabase when connected. Download backups regularly. Never use Clear All Data unless you intend to delete the cloud data too.</p></div>
 </main>
 <section id="statDetailPage" class="hidden" style="position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:18px 16px 100px;">
   <div style="max-width:920px;margin:auto;">
@@ -522,151 +522,7 @@ function updateSmartExpiryAlert(){const el=$('smartExpiryAlert');if(!el)return;c
 $('importBtn').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());const arr=Array.isArray(d)?d:d.products;if(!Array.isArray(arr))throw Error();if(confirm('Add the products from this backup to the current data?')){const known=new Set(products.map(p=>p.id));arr.forEach(p=>products.push({...p,id:known.has(p.id)?String(Date.now())+Math.random():p.id||String(Date.now())}));persist();render();toast('Backup imported')}}catch(err){toast('Please select a valid backup JSON file')}e.target.value=''};
 
-// Import store SKU/Excel file; recognize common English and Bangla headers and preserve missing fields.
-function normHead(v){return String(v??'').replace(/^\uFEFF/,'').trim().toLowerCase().replace(/[\s_\-./()]+/g,'').replace(/[^\p{L}\p{N}]/gu,'')}
-function parseDelimited(text){
- const first=(text.split(/\r?\n/).find(x=>x.trim())||'');const candidates=[',','\t',';'];const delim=candidates.sort((a,b)=>first.split(b).length-first.split(a).length)[0];
- const rows=[];let row=[],cell='',quoted=false;
- for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===delim&&!quoted){row.push(cell.trim());cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);row=[];cell=''}else cell+=c}
- row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);return rows;
-}
-function pickColumn(headers,candidates){return headers.findIndex(h=>candidates.includes(normHead(h)))}
-function excelDate(v){if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);if(typeof v==='number'&&window.XLSX&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}const t=String(v??'').trim();if(/^\d{5}(?:\.\d+)?$/.test(t)&&window.XLSX&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(Number(t));if(d&&d.y>1900)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}if(!t)return '';if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(t)){const [y,m,d]=t.split('-');return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}return ''}
-$('skuImportBtn').onclick=()=>$('skuFile').click();
-$('templateBtn').onclick=()=>download('store-sku-template.csv','\ufeffProduct Name,Barcode,SKU,Stock,Expiry Date,Batch,Notes\r\nOreo Biscuit,7622200600013,SKU001,25,2027-12-31,BATCH01,Stock is optional; leave blank if unavailable\r\n','text/csv;charset=utf-8;');
-// Persist large SKU imports in IndexedDB so a reload can resume cloud upload.
-const SKU_QUEUE_DB='allItemsSkuImportQueueV1';
-function skuQueueDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(SKU_QUEUE_DB,1);req.onupgradeneeded=()=>req.result.createObjectStore('queue');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
-async function saveSkuQueue(value){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const tx=db.transaction('queue','readwrite');tx.objectStore('queue').put(value,'pending');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
-async function readSkuQueue(){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const req=db.transaction('queue','readonly').objectStore('queue').get('pending');req.onsuccess=()=>{const v=req.result||null;db.close();resolve(v);};req.onerror=()=>{db.close();reject(req.error);};});}
-async function clearSkuQueue(){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const tx=db.transaction('queue','readwrite');tx.objectStore('queue').delete('pending');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
-async function saveSkuSourceFile(file,ownerId){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const tx=db.transaction('queue','readwrite');tx.objectStore('queue').put({file:file,ownerId:ownerId,name:file.name,size:file.size},'sourceFile');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
-async function readSkuSourceFile(){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const req=db.transaction('queue','readonly').objectStore('queue').get('sourceFile');req.onsuccess=()=>{const v=req.result||null;db.close();resolve(v);};req.onerror=()=>{db.close();reject(req.error);};});}
-async function clearSkuSourceFile(){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const tx=db.transaction('queue','readwrite');tx.objectStore('queue').delete('sourceFile');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
-let skuResumeRunning=false;
-async function resumePendingSkuImport(){
- if(skuResumeRunning||!cloudClient||!cloudSession)return;
- let queue;try{queue=await readSkuQueue();}catch(err){console.error('Could not read pending SKU import',err);return;}
- if(!queue||queue.ownerId!==cloudSession.user.id){
-  let source=null;try{source=await readSkuSourceFile();}catch(err){console.error(err);}
-  if(source&&source.ownerId===cloudSession.user.id&&source.file){await clearSkuSourceFile();const input=$('skuFile');if(input&&input.onchange){const fake={target:{files:[source.file],value:''}};await input.onchange(fake);}}
-  return;
- }
- skuResumeRunning=true;const out=$('skuImportResult');
- try{
-  const items=queue.items||[];let i=Number(queue.nextIndex)||0;let batchSize=250;
-  if(out)out.textContent=`Resuming saved SKU upload: ${i.toLocaleString()} / ${items.length.toLocaleString()} products…`;
-  while(i<items.length){
-   if(!cloudClient||!cloudSession||cloudSession.user.id!==queue.ownerId)throw new Error('Upload paused because the logged-in account changed. Log back into the same account to resume.');
-   const batch=items.slice(i,i+batchSize).map(p=>toCloud(p,queue.ownerId));
-   const {error}=await cloudClient.from('products').upsert(batch,{onConflict:'owner_id,id'});
-   if(error){const message=String(error.message||error.details||'');if(batchSize>10&&/statement timeout|canceling statement|timeout|payload too large|request entity too large|too many rows|content too large|413/i.test(message)){batchSize=Math.max(10,Math.floor(batchSize/2));if(out)out.textContent='Adjusting upload batch size to '+batchSize+' products and retrying safely…';continue;}throw new Error('Cloud save failed near product '+(i+1)+': '+message);}
-   i+=batch.length;queue.nextIndex=i;
-   // Checkpoint every ~1,000 products rather than rewriting the entire 80k-item queue after every small batch. Re-uploading a recent batch is safe because IDs are stable and upsert is idempotent.
-   if(i%1000<batch.length||i===items.length)await saveSkuQueue(queue);
-   if(out)out.textContent=`Saving to cloud: ${i.toLocaleString()} / ${items.length.toLocaleString()} products… (reload will resume)`;
-   setCloudStatus(`Uploading SKU file: ${i.toLocaleString()} / ${items.length.toLocaleString()}`);
-  }
-  const ids=items.map(p=>String(p.id));const foundIds=new Set();
-  // Keep verification requests small so long SKU uploads do not create oversized REST query URLs.
-  const verifyBatchSize=100;
-  for(let j=0;j<ids.length;j+=verifyBatchSize){
-   const batchIds=ids.slice(j,j+verifyBatchSize);
-   const {data,error}=await cloudClient.from('products').select('id').eq('owner_id',queue.ownerId).in('id',batchIds);
-   if(error)throw new Error('Upload finished but cloud verification failed near product '+(j+1)+': '+error.message);
-   for(const row of data||[])foundIds.add(String(row.id));
-   if(out)out.textContent=`Verifying cloud save: ${Math.min(j+verifyBatchSize,ids.length).toLocaleString()} / ${ids.length.toLocaleString()} products…`;
-  }
-  const missing=ids.filter(id=>!foundIds.has(id)).length;
-  if(missing)throw new Error(`Cloud verification found ${missing} imported product(s) missing.`);
-  await clearSkuQueue();await clearSkuSourceFile();await restoreCloudSafely();
-  if(out)out.textContent=`Import & Cloud Sync successful: ${Number(queue.added||0).toLocaleString()} new products, ${Number(queue.updated||0).toLocaleString()} matched products updated, ${Number(queue.skipped||0).toLocaleString()} empty rows skipped. Verified ${foundIds.size.toLocaleString()} products in your account.`;
-  toast('SKU import saved and verified in cloud');
- }catch(err){console.error(err);if(out)out.textContent='Upload paused safely: '+(err.message||'check connection')+'. Your progress is saved on this device; reload or log in again to resume.';setCloudStatus('SKU upload paused; saved progress will resume after reload/login.');}
- finally{skuResumeRunning=false;}
-}
-$('skuFile').onchange=async e=>{
- const f=e.target.files[0];if(!f)return;const out=$('skuImportResult');
- if(!cloudClient||!cloudSession){out.textContent='Log in to your own Supabase account before uploading the SKU file. Without login, uploaded data will not be available on other devices or after a later login.';toast('Log in before importing.');e.target.value='';return;}
- out.textContent='Refreshing cloud stock before applying SKU adjustments…';
- try{await restoreCloudSafely();out.textContent='Saving local recovery copy…';await saveSkuSourceFile(f,cloudSession.user.id);out.textContent='Reading file…';
-  let rows=[];const lower=f.name.toLowerCase();
-  if(lower.endsWith('.xlsx')||lower.endsWith('.xls')){
-   if(!window.XLSX)throw Error('Excel reader could not load. Check internet connection, or save the Excel file as CSV UTF-8 and upload again.');
-   const buf=await f.arrayBuffer();const wb=XLSX.read(buf,{type:'array',cellDates:true});const sheet=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:true}).map(r=>r.map(v=>v instanceof Date?v.toISOString().slice(0,10):String(v??'').trim())).filter(r=>r.some(v=>String(v).trim()!==''));
-  }else rows=parseDelimited(await f.text());
-  if(rows.length<1)throw Error('The file has no readable rows.');
-  let headers=rows[0].map(v=>String(v??''));let dataRows=rows.slice(1);
-  const nameI=pickColumn(headers,['productname','product','itemname','item','name','description','materialdescription','productdescription','','','']);
-  const barcodeI=pickColumn(headers,['barcode','barcodeno','barcodenumber','ean','upc','gtin','ean13','','']);
-  const skuI=pickColumn(headers,['sku','skucode','itemcode','productcode','materialcode','article','itemnumber','stockkeepingunit','itemid','productid','code','','','']);
-  let stockI=pickColumn(headers,['stock','stockqty','stockquantity','stocklevel','stockpackets','stockpieces','currentstock','currentquantity','quantity','qty','onhand','quantityonhand','inventory','availablequantity','availableqty','packets','pieces','units','balance','closingstock','openingstock','available','stockonhand','physicalstock','systemstock','totalstock','stockinhand','closingqty','openingqty','closingquantity','openingquantity','স্টক','পরিমাণ','পরিমান','মজুদ']);
-  // Automatically recognize less-standard stock column names (English or Bangla),
-  // while excluding minimum/reorder/alert columns.
-  if(stockI<0)stockI=headers.findIndex(h=>{
-   const k=normHead(h);
-   if(/min|minimum|reorder|alert|threshold|safety|প্রয়োজনীয়|সর্বনিম্ন/.test(k))return false;
-   return /(stock|quantity|qty|onhand|inventory|balance|packet|piece|units|available|closing|opening|স্টক|পরিমাণ|পরিমান|মজুদ)/i.test(k);
-  });
-  const minI=pickColumn(headers,['minstock','minimumstock','reorderlevel','lowstockalert','']);
-  const expiryI=pickColumn(headers,['expiry','expirydate','expirationdate','bestbefore','bestbeforedate','','','']);
-  const batchI=pickColumn(headers,['batch','batchno','lot','lotnumber','batchnumber']);
-  const notesI=pickColumn(headers,['notes','note','remarks','comment','location','shelf','']);
-  // If the file has no recognizable headings, assume first column is name/item code and keep every row importable.
-  const hasRecognized=[nameI,barcodeI,skuI,stockI,minI,expiryI,batchI,notesI].some(i=>i>=0);
-  const hasIdentity=[nameI,barcodeI,skuI].some(i=>i>=0);
-  if(!hasIdentity){dataRows=hasRecognized?rows.slice(1):rows;headers=[];}
-  let added=0,updated=0,skipped=0;
-  // Track only rows touched by this import so very large files do not re-upload the whole database.
-  const importedProducts=new Map();
-  const val=(r,i)=>i>=0?String(r[i]??'').trim():'';
-  // Index existing products once so imports with 100k+ rows do not perform O(n²) lookups.
-  const identityMap=new Map();
-  const normalizeProductName=v=>String(v??'').normalize('NFKC').toLowerCase().replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ');
-  const nameMap=new Map();
-  for(const p of products){
-   if(p.barcode){const k='b:'+String(p.barcode).trim().replace(/\s+/g,'');if(!identityMap.has(k))identityMap.set(k,p)}
-   if(p.sku){const k='s:'+String(p.sku).trim().toLowerCase().replace(/\s+/g,'');if(!identityMap.has(k))identityMap.set(k,p)}
-   const nk=normalizeProductName(p.name);if(nk&&!nameMap.has(nk))nameMap.set(nk,p);
-  }
-  for(let n=0;n<dataRows.length;n++){
-   const r=dataRows[n];
-   let name=val(r,nameI),barcode=val(r,barcodeI),sku=val(r,skuI);
-   if(!hasIdentity){name=String(r[0]??'').trim();sku=String(r[1]??'').trim();barcode=String(r[2]??'').trim();}
-   const code=barcode||sku;
-   if(!name&&!code){skipped++;continue}
-   if(!name)name=sku||barcode||`Imported item ${n+1}`;
-   const stockRaw=val(r,stockI),minRaw=val(r,minI),expiryRaw=val(r,expiryI),batch=val(r,batchI),notes=val(r,notesI);
-   const stockText=stockRaw.replace(/[,\s]/g,'');const stockNum=stockText!==''?Number(stockText):NaN;const stock=Number.isFinite(stockNum)?Math.max(0,Math.floor(stockNum)):0;
-   const minStock=minRaw!==''&&Number.isFinite(Number(minRaw))?Math.max(0,parseInt(minRaw,10)||0):5;
-   const expiry=excelDate(expiryRaw);
-   const barcodeKey=barcode?'b:'+barcode.trim().replace(/\s+/g,''):'';
-   const skuKey=sku?'s:'+sku.trim().toLowerCase().replace(/\s+/g,''):'';
-   // Prefer strong identifiers. If a file/product has no usable identifier, fall back to exact normalized name
-   // so importing the same name-only SKU list again does not create another copy of every product.
-   let existing=(barcodeKey&&identityMap.get(barcodeKey))||(skuKey&&identityMap.get(skuKey));
-   if(!existing && name){const named=nameMap.get(normalizeProductName(name));if(named && ((!barcode&&!sku)||(!named.barcode&&!named.sku)))existing=named;}
-   if(existing){
-    existing.name=name||existing.name;existing.barcode=barcode||existing.barcode||'';existing.sku=sku||existing.sku||'';
-    if(stockRaw!==''&&Number.isFinite(stockNum)){const currentStock=Number(existing.stock)||0;existing.stock=Math.max(0,currentStock+stockNum);existing.lastFileStockValue=stockNum;}if(minRaw!=='')existing.minStock=minStock;if(expiry)existing.expiry=expiry;if(batch)existing.batch=batch;if(notes)existing.notes=notes;
-    if(existing.barcode)identityMap.set('b:'+String(existing.barcode).trim().replace(/\s+/g,''),existing);
-    if(existing.sku)identityMap.set('s:'+String(existing.sku).trim().toLowerCase().replace(/\s+/g,''),existing);
-    const nk=normalizeProductName(existing.name);if(nk&&!nameMap.has(nk))nameMap.set(nk,existing);
-    updated++;
-    importedProducts.set(String(existing.id),existing);
-   }else{
-    const newProduct={id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),name,barcode,sku,stock:stockNum<0?0:stock,minStock,expiry,batch,notes:notes||'Imported from SKU file — check and complete missing details',createdAt:new Date().toISOString(),lastFileStockValue:Number.isFinite(stockNum)&&stockNum!==0?stockNum:null};products.push(newProduct);if(barcode)identityMap.set('b:'+barcode.trim().replace(/\s+/g,''),newProduct);if(sku)identityMap.set('s:'+sku.trim().toLowerCase().replace(/\s+/g,''),newProduct);const nk=normalizeProductName(name);if(nk&&!nameMap.has(nk))nameMap.set(nk,newProduct);added++;
-    importedProducts.set(String(newProduct.id),newProduct);
-   }
-  }
-  if(added+updated===0)throw Error('No usable product rows found. Check that the file contains at least a product name, SKU or barcode.');
-  // Save the parsed import locally before network upload. Batch progress is checkpointed.
-  const uploadTime=new Date().toISOString();const queueItems=Array.from(importedProducts.values());queueItems.forEach(p=>{p.lastSkuUploadAt=uploadTime;});const queue={ownerId:cloudSession.user.id,items:queueItems,nextIndex:0,added,updated,skipped,createdAt:uploadTime};
-  await saveSkuQueue(queue);await clearSkuSourceFile();
-  render();out.textContent=`Import prepared: ${queue.items.length.toLocaleString()} products saved as a resumable upload. Navigation is safe; reload will resume after login.`;
-  await resumePendingSkuImport();
- }catch(err){out.textContent=err.message||'Could not read this file. Try CSV UTF-8 or Excel .xlsx.'}finally{e.target.value=''}
-};
+// SKU/Excel upload feature removed as requested.
 
 $('resetBtn').onclick=async()=>{
  if(!cloudClient||!cloudSession||!cloudSession.user||!cloudSession.user.email){toast('Log in to your own Supabase account before clearing data.');return;}
@@ -1115,7 +971,7 @@ async function updateAuthUI(){
   switchUserStorage(cloudSession.user.id);
   // Authentication success should unlock the app even if the products table is not ready.
   document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
-  try{await restoreCloudSafely();await resumePendingSkuImport();}
+  try{await restoreCloudSafely();}
   catch(e){console.error(e);setCloudStatus('Logged in, but cloud data could not load: '+(e.message||'check products table and RLS policies')+'. Local data is preserved.');}
  } else {$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');}
 }
