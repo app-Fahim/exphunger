@@ -385,7 +385,19 @@ function renderDashboardInsights(){
  else low.slice(0,12).forEach(p=>{const row=document.createElement('article');row.className='product';const title=document.createElement('div');title.className='pname';title.textContent=p.name;const meta=document.createElement('div');meta.className='meta';meta.textContent='Stock: '+Number(p.stock||0).toLocaleString()+' · Minimum: '+Number(p.minStock||0).toLocaleString()+(p.sku?' · SKU: '+p.sku:'');row.append(title,meta);lowRoot.append(row)});
  const duplicates=findPossibleDuplicates();$('duplicateCount').textContent=duplicates.length.toLocaleString();dupRoot.innerHTML='';
  if(!duplicates.length)dupRoot.innerHTML='<div class="empty">No possible duplicates detected from barcode, SKU, or exact product name.</div>';
- else duplicates.slice(0,12).forEach(group=>{const row=document.createElement('article');row.className='product';const title=document.createElement('div');title.className='pname';title.textContent=group.items[0].name+' · '+group.items.length+' records';const meta=document.createElement('div');meta.className='meta';meta.textContent=group.key.startsWith('barcode:')?'Matching barcode: '+group.key.slice(8):group.key.startsWith('sku:')?'Matching SKU: '+group.key.slice(4):'Matching product name (no barcode/SKU): '+group.key.slice(5);row.append(title,meta);dupRoot.append(row)});
+ else duplicates.slice(0,12).forEach(group=>{
+  const heading=document.createElement('div');heading.className='meta';heading.style.cssText='font-weight:700;margin:12px 0 6px';heading.textContent=group.key.startsWith('barcode:')?'Matching barcode: '+group.key.slice(8):group.key.startsWith('sku:')?'Matching SKU: '+group.key.slice(4):'Matching product name (no barcode/SKU): '+group.key.slice(5);dupRoot.append(heading);
+  group.items.forEach((p,index)=>{
+   const row=document.createElement('article');row.className='product';row.style.marginBottom='8px';
+   const info=document.createElement('div');info.style.cssText='flex:1;min-width:0';
+   const title=document.createElement('div');title.className='pname';title.textContent=p.name||'(Unnamed product)';
+   const meta=document.createElement('div');meta.className='meta';meta.textContent='Stock: '+Number(p.stock||0).toLocaleString()+' Packets · SKU: '+(p.sku||'—')+' · Barcode: '+(p.barcode||'—');
+   info.append(title,meta);
+   const del=document.createElement('button');del.type='button';del.className='btn-red';del.textContent='🗑 Delete this duplicate';del.style.cssText='align-self:center;white-space:normal;max-width:180px';
+   del.onclick=async()=>{if(!confirm('Delete only this record? Product: '+(p.name||'(Unnamed product)')+' · Stock: '+Number(p.stock||0)+'. This cannot be undone.'))return;del.disabled=true;del.textContent='Deleting…';try{await removeProduct(p.id);renderDashboardInsights()}finally{del.disabled=false;del.textContent='🗑 Delete this duplicate'}};
+   row.append(info,del);dupRoot.append(row);
+  });
+ });
 }
 function cleanProductNotes(value){
  let s=String(value||'');
