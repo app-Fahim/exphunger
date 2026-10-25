@@ -951,9 +951,16 @@ async function restoreCloudSafely(){
  // Supabase is the source of truth after login. Never upload stale local-cache rows
  // automatically: a product deleted in the cloud could otherwise be recreated on refresh.
  if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
+ // Do not let a background refresh replace the on-screen list while a save/delete is
+ // writing to Supabase. That race made the product total jump up and down.
+ if(cloudBusy) return;
  const accountId=cloudSession.user.id;
  switchUserStorage(accountId);
  const remoteRows=await fetchCloudProducts();
+ // A save may have started while the fetch was in flight. In that case, leave the
+ // current list alone; the next refresh/login will read the committed cloud rows.
+ if(cloudBusy) return;
+ if(!cloudSession||cloudSession.user.id!==accountId) return;
  // Keep the displayed total tied to the exact rows returned by Supabase. The old
  // client-side dedupe changed the count on every cloud refresh when similar names,
  // barcodes or SKUs existed, making the total appear to rise and fall.
@@ -1084,7 +1091,7 @@ if(cloudClient){cloudClient.auth.onAuthStateChange((event,session)=>{
 });}
 updateAuthUI().catch(e=>{console.error(e);setCloudStatus('Could not initialize cloud session. Local data is preserved.');});
 // Refresh the account's cloud data when the user returns to this tab/device.
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudClient&&cloudSession){restoreCloudSafely().catch(e=>{console.error(e);setCloudStatus('Cloud refresh failed; local data is preserved.');});}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudClient&&cloudSession&&!cloudBusy){restoreCloudSafely().catch(e=>{console.error(e);setCloudStatus('Cloud refresh failed; local data is preserved.');});}});
 
 
 // Make Enter work consistently for search, login, date filters, scanner, and product forms.
