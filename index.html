@@ -278,6 +278,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <div class="panel" id="skuImportPanel" style="margin-top:14px">
  <h3>📄 Upload SKU File</h3>
  <p class="notice">Upload an Excel (.xlsx, .xls) or CSV file. All worksheets and non-empty rows are processed. Product Name is detected automatically where possible; other columns are preserved in Notes. SKU, Barcode, Stock and Expire/Expiry Date are optional. Missing columns will not stop the file import. If Stock is missing, existing stock is kept (or 0 for a new product).</p>
+  <label class="notice" style="display:flex;align-items:flex-start;gap:9px;margin:10px 0;padding:12px;border:1px solid var(--border);border-radius:10px"><input id="addImportedStock" type="checkbox" checked style="margin-top:3px;min-width:18px;min-height:18px"><span><strong>➕ Add incoming stock to current stock</strong><br>Checked: old stock + quantity in this file. Uncheck if the file contains the full current stock count and should replace the old quantity. Do not upload the same delivery file twice while this is checked, or the quantity will be added twice.</span></label>
  <div class="form-actions" style="margin:10px 0"><button type="button" class="btn-secondary" id="skuSampleDownloadBtn">⬇️ Download Sample Excel</button><button type="button" class="btn-secondary" id="skuSampleCsvBtn">⬇️ Download Sample CSV</button></div>
  <div class="notice">Recommended columns: Product Name, SKU, Barcode, Stock, Expire. Only Product Name is required; SKU, Barcode, Stock and Expire are optional. The file will still import if any or all of those optional columns are missing. Use one product per row and keep the first row as the column headings. You can add your own columns too; their values are saved in Notes. Sample files below show the expected format.</div>
  <div class="field"><label for="skuImportFile">Choose SKU / product file</label><input class="input" id="skuImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></div>
@@ -597,7 +598,10 @@ $('skuImportBtn').addEventListener('click',async()=>{
    if(existing&&usedExistingIds.has(String(existing.id)))existing=null;
    if(!existing){const nameCandidate=byName.get(name.toLowerCase());if(nameCandidate&&!usedExistingIds.has(String(nameCandidate.id)))existing=nameCandidate;}
    if(existing)usedExistingIds.add(String(existing.id));
-   const stock=hasStock?Math.floor(Number(String(stockRaw).replace(/,/g,''))):(existing?Math.max(0,Number(existing.stock)||0):0);
+   const importedQty=hasStock?Math.floor(Number(String(stockRaw).replace(/,/g,''))):0;
+   const addToExisting=!!$('addImportedStock')?.checked;
+   const oldQty=existing?Math.max(0,Number(existing.stock)||0):0;
+   const stock=hasStock?(existing&&addToExisting?oldQty+importedQty:importedQty):oldQty;
    const minStock=minRaw!==''&&Number.isFinite(Number(minRaw))?Math.max(0,Math.floor(Number(minRaw))):(existing?Math.max(0,Number(existing.minStock)||0):5);
    const batch=String(skuCell(row,['Batch','Batch No','Lot','Lot Number'])).trim()||(existing?.batch||'');
    const standardHeaders=new Set(['product name','product','item name','item description','description','name','product title','item','สินค้า','اسم المنتج','sku','sku code','item code','item no','item number','product code','code','plu','barcode','bar code','ean','upc','gtin','stock','current stock','qty','quantity','on hand','available stock','balance','stock (packets)','expiry date','expiry','expiration date','best before','expire date','minimum stock','min stock','low stock alert','reorder level','batch','batch no','lot','lot number','notes','remarks','location','shelf']);
@@ -607,7 +611,7 @@ $('skuImportBtn').addEventListener('click',async()=>{
    const oldNotes=String(existing?.notes||skuCell(row,['Notes','Remarks','Location','Shelf'])||'').trim();
    const notes=[oldNotes,importedDetails?'Imported file data — '+importedDetails:''].filter(Boolean).join(' | ');
    const p=existing?{...existing,name,sku:sku||existing.sku||'',barcode:barcode||existing.barcode||'',stock,minStock,expiry:expiry||existing.expiry||'',batch,notes}:{id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)),name,image_url:'',barcode,sku,stock,minStock,expiry,batch,notes,createdAt:new Date().toISOString(),stockHistory:[]};
-   if(existing&&hasStock&&Number(existing.stock)!==stock)recordStockHistory(p,existing.stock,stock,'SKU file import');
+   if(existing&&hasStock&&Number(existing.stock)!==stock)recordStockHistory(p,existing.stock,stock,addToExisting?'SKU file import · added incoming quantity ('+importedQty+')':'SKU file import · replaced stock quantity');
    changed.push(p);
    if(existing){updated++;}else{added++;createdIds.add(String(p.id));}
    if(sku&&!bySku.has(sku.toLowerCase()))bySku.set(sku.toLowerCase(),p);if(barcode&&!byBarcode.has(barcode))byBarcode.set(barcode,p);if(!byName.has(name.toLowerCase()))byName.set(name.toLowerCase(),p);
