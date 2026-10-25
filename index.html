@@ -1179,19 +1179,20 @@ async function restoreCloudSafely(){
  // Supabase is the source of truth after login. Never upload stale local-cache rows
  // automatically: a product deleted in the cloud could otherwise be recreated on refresh.
  if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
- // Do not let a background refresh replace the on-screen list while a save/delete is
- // writing to Supabase. That race made the product total jump up and down.
- if(cloudBusy) return;
+ if(cloudBusy)return;
  const accountId=cloudSession.user.id;
- switchUserStorage(accountId);
+ // Keep this user's cached catalog visible while the cloud request is in progress.
+ // Avoid switching through guest/empty storage and briefly showing zero stock.
+ if(activeDataUserId!==accountId){
+  KEY='biscuitExpiryTracker.user.'+String(accountId)+'.v1';
+  activeDataUserId=accountId;editingId=null;
+  try{const saved=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(saved))products=saved;}catch(e){}
+  render();
+ }
  const remoteRows=await fetchCloudProducts();
- // A save may have started while the fetch was in flight. In that case, leave the
- // current list alone; the next refresh/login will read the committed cloud rows.
- if(cloudBusy) return;
- if(!cloudSession||cloudSession.user.id!==accountId) return;
- // Keep the displayed total tied to the exact rows returned by Supabase. The old
- // client-side dedupe changed the count on every cloud refresh when similar names,
- // barcodes or SKUs existed, making the total appear to rise and fall.
+ // Replace the cache only after the complete fetch succeeds.
+ if(cloudBusy)return;
+ if(!cloudSession||cloudSession.user.id!==accountId)return;
  products=remoteRows.map(row=>fromCloud(row));
  safeCacheProducts();
  render();
