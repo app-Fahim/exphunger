@@ -246,7 +246,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <div class="panel home-only-hidden" id="scannerPanel">
 <h2>▥ Barcode Scanner</h2>
 <p class="notice">Scan here using your USB/Bluetooth or device scanner. If your scanner types the barcode like a keyboard, the matching product will be shown.</p>
-<div class="searchrow"><input class="input" id="scanInput" placeholder="Tap here and scan a barcode…" autocomplete="off" inputmode="numeric"><button id="scanBtn">Search</button></div>
+<div class="searchrow"><input class="input" id="scanInput" placeholder="Tap here and scan a barcode…" autocomplete="off" inputmode="numeric"><button id="scanBtn">Search</button><button id="cameraScanBtn" class="btn-secondary" type="button">Use Camera</button></div><video id="barcodeCamera" class="hidden" playsinline muted style="width:100%;max-height:280px;object-fit:cover;border-radius:12px;margin-top:10px"></video><button id="stopCameraScanBtn" class="btn-secondary hidden" type="button" style="margin-top:8px">Stop Camera</button>
 <div id="scanResult" class="notice" style="margin-top:10px">The scanned barcode will be checked here.</div>
 </div>
 
@@ -455,6 +455,10 @@ function runBarcodeScan(){
  }
 }
 $('scanBtn').onclick=runBarcodeScan;
+let barcodeStream=null,barcodeScanFrame=0;
+async function stopBarcodeCamera(){if(barcodeScanFrame)cancelAnimationFrame(barcodeScanFrame);barcodeScanFrame=0;if(barcodeStream)barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null;const video=$('barcodeCamera');if(video){video.pause();video.srcObject=null;video.classList.add('hidden')}$('stopCameraScanBtn')?.classList.add('hidden');$('cameraScanBtn')?.classList.remove('hidden')}
+$('stopCameraScanBtn')?.addEventListener('click',stopBarcodeCamera);
+$('cameraScanBtn')?.addEventListener('click',async()=>{if(!('BarcodeDetector' in window)){toast('Camera barcode scanning is not supported in this browser. Use your device scanner or type the barcode.');return}try{const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']});barcodeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const video=$('barcodeCamera');video.srcObject=barcodeStream;video.classList.remove('hidden');$('stopCameraScanBtn').classList.remove('hidden');$('cameraScanBtn').classList.add('hidden');await video.play();const scanFrame=async()=>{if(!barcodeStream)return;try{const codes=await detector.detect(video);if(codes.length&&codes[0].rawValue){$('scanInput').value=codes[0].rawValue;await stopBarcodeCamera();runBarcodeScan();return}}catch(e){}barcodeScanFrame=requestAnimationFrame(scanFrame)};scanFrame()}catch(err){await stopBarcodeCamera();toast('Could not open camera. Allow camera permission and try again.')}});
 $('scanInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBarcodeScan()}});
 $('navScan')?.addEventListener('click',()=>{$('scannerPanel').scrollIntoView({behavior:'smooth'});$('scanInput').focus()});
 
@@ -490,7 +494,7 @@ $('productForm').addEventListener('submit',async e=>{
    const {error}=await cloudClient.from('products').upsert(row,{onConflict:'owner_id,id'});
    if(error)throw new Error('Cloud save failed: '+error.message);
   }
-  if(editingId){const i=products.findIndex(p=>String(p.id)===String(editingId));if(i<0)throw new Error('Product is no longer in the list.');products[i]=candidate;}
+  if(editingId){const i=products.findIndex(p=>String(p.id)===String(editingId));if(i<0)throw new Error('Product is no longer in the list.');const old=products[i];candidate.stockHistory=Array.isArray(old.stockHistory)?old.stockHistory:[];if(Number(old.stock)!==Number(candidate.stock))recordStockHistory(candidate,old.stock,candidate.stock,'Product edit');products[i]=candidate;}
   else products.push(candidate);
   safeCacheProducts();render();resetForm();
   if(cloudClient&&cloudSession)setCloudStatus('Connected · product saved to Supabase at '+new Date().toLocaleTimeString());
