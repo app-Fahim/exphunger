@@ -252,7 +252,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <h2 id="formTitle">➕ Add New Product</h2>
 <form id="productForm">
 <div class="formgrid">
-<div class="field full"><label for="name">Product Name *</label><input class="input" id="name" required placeholder="e.g. Milk, Juice, Rice, or Biscuits"></div>
+<div class="field full"><label for="name">Product Name *</label><input class="input" id="name" required placeholder="e.g. Milk, Juice, Rice, or Biscuits"><div class="form-actions" style="margin-top:8px"><button type="button" class="btn-secondary" id="autoFindImageBtn">🔎 Find Product Image Automatically</button><button type="button" class="btn-secondary" id="uploadProductImageBtn">📷 Upload from Phone</button></div><input id="productImageFile" type="file" accept="image/*" capture="environment" class="hidden"><input id="productImageUrl" type="hidden"><div id="productImageStatus" class="notice" style="margin-top:8px">No product image selected yet.</div><div id="productImagePreview" style="margin-top:8px"></div></div>
 <div class="field"><label for="barcode">Barcode (Optional)</label><input class="input" id="barcode" inputmode="numeric" placeholder="Barcode number"></div>
 <div class="field"><label for="sku">SKU / Item Code (Optional)</label><input class="input" id="sku" placeholder="SKU or item code"></div>
 <div class="field"><label for="stock">Current Stock (Packets) *</label><input class="input" id="stock" type="number" min="0" step="1" required value="0"></div>
@@ -344,7 +344,7 @@ function render(){
  if(list.length>DISPLAY_LIMIT){const note=document.createElement('div');note.className='notice';note.textContent=`Showing first ${DISPLAY_LIMIT.toLocaleString()} of ${list.length.toLocaleString()} matching products. Use Search to narrow the list.`;root.append(note);list=list.slice(0,DISPLAY_LIMIT)}
  list.forEach(p=>{const s=status(p),low=Number(p.stock)>0&&Number(p.stock)<=Number(p.minStock||0),expiresWithinMonth=expiresWithin30Days(p);
  const card=document.createElement('article');card.className='product'+(expiresWithinMonth?' expiring-month':'');
- const left=document.createElement('div');const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
+ const left=document.createElement('div');if(p.image_url){const im=document.createElement('img');im.src=p.image_url;im.alt=p.name+" product image";im.loading="lazy";im.style.cssText="width:76px;height:76px;object-fit:contain;background:#fff;border-radius:12px;padding:4px;float:left;margin:0 10px 8px 0";im.onerror=()=>{im.style.display="none"};left.append(im)}const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
  const meta=document.createElement('div');meta.className='meta';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'}`;left.append(meta);
  const tags=document.createElement('div');tags.className='pills';const pill=document.createElement('span');pill.className='pill '+s; pill.textContent=statusLabel(s);tags.append(pill);
  if(low){const lp=document.createElement('span');lp.className='pill near';lp.textContent='Low Stock';tags.append(lp)}
@@ -360,7 +360,7 @@ function render(){
  refreshPickButton();
  pickBtn.onclick=()=>{const id=String(p.id);if(isPicked()){pickListSelected.delete(id);toast('Removed from Pick List: '+p.name)}else{pickListSelected.add(id);toast('Added to Pick List: '+p.name)}savePickListState();refreshPickButton();if(typeof renderPickList==='function'&&$('pickListResults'))renderPickList();};
  actions.append(pickBtn);
- [['✎ Edit',()=>edit(p.id),'btn-secondary'],['＋ Add Stock',()=>changeStock(p.id,1),'btn-green'],['− Reduce Stock',()=>changeStock(p.id,-1),'btn-secondary'],['🗑 Delete',()=>removeProduct(p.id),'btn-red']].forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=fn;actions.append(b)});
+ [['↻ Update',()=>edit(p.id),'btn-secondary'],['＋ Add Stock',()=>changeStock(p.id,1),'btn-green'],['− Reduce Stock',()=>changeStock(p.id,-1),'btn-secondary'],['🗑 Delete',()=>removeProduct(p.id),'btn-red']].forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=fn;actions.append(b)});
  card.append(left,qty,actions);root.append(card);
  });
 }
@@ -386,7 +386,7 @@ function openStatDetail(kind){
    const exp=document.createElement('div');exp.className='meta'+(isExpiring?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(exp);
    const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);
    const actions=document.createElement('div');actions.className='actions';
-   const editBtn=document.createElement('button');editBtn.className='btn-secondary';editBtn.textContent='✎ Edit';editBtn.onclick=()=>{closeStatDetail();edit(p.id)};actions.append(editBtn);
+   const editBtn=document.createElement('button');editBtn.className='btn-secondary';editBtn.textContent='↻ Update';editBtn.onclick=()=>{closeStatDetail();edit(p.id)};actions.append(editBtn);
    card.append(left,qty,actions);root.append(card);
  });
  $('statDetailPage').classList.remove('hidden');
@@ -397,8 +397,47 @@ $('detailBack').addEventListener('click',closeStatDetail);
  const card=$(id)?.closest('.stat');if(card){card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-label','Open '+kind+' details');card.addEventListener('click',()=>openStatDetail(kind));card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStatDetail(kind)}})}
 });
 
-function resetForm(){editingId=null;$('productForm').reset();$('stock').value=0;$('minStock').value=5;$('formTitle').textContent='➕ Add New Product';$('saveBtn').textContent='Save Product';$('cancelEdit').classList.add('hidden')}
-function edit(id){const p=products.find(x=>x.id===id);if(!p)return;openNavPage('Add Item',[$('formPanel')],'navAdd');editingId=id;['name','barcode','sku','stock','minStock','expiry','batch','notes'].forEach(k=>$(k).value=p[k]??(k==='stock'||k==='minStock'?0:''));$('formTitle').textContent='✎ Edit Product Details';$('saveBtn').textContent='Save Changes';$('cancelEdit').classList.remove('hidden');$('navPage').scrollTop=0;setTimeout(()=>{$('name').focus();$('formPanel').scrollIntoView({behavior:'smooth',block:'start'})},50)}
+function resetForm(){editingId=null;$('productForm').reset();$('productImageUrl').value="";$('productImageStatus').textContent="No product image selected yet.";$('productImagePreview').innerHTML="";$('stock').value=0;$('minStock').value=5;$('formTitle').textContent='➕ Add New Product';$('saveBtn').textContent='Save Product';$('cancelEdit').classList.add('hidden')}
+function edit(id){const p=products.find(x=>x.id===id);if(!p)return;openNavPage('Add Item',[$('formPanel')],'navAdd');editingId=id;['name','barcode','sku','stock','minStock','expiry','batch','notes'].forEach(k=>$(k).value=p[k]??(k==='stock'||k==='minStock'?0:''));$('productImageUrl').value=p.image_url||"";showProductImage(p.image_url||"");$('formTitle').textContent='✎ Edit Product Details';$('saveBtn').textContent='Save Changes';$('cancelEdit').classList.remove('hidden');$('navPage').scrollTop=0;setTimeout(()=>{$('name').focus();$('formPanel').scrollIntoView({behavior:'smooth',block:'start'})},50)}
+function showProductImage(url){
+ const root=$('productImagePreview');if(!root)return;root.innerHTML='';
+ if(url){const img=document.createElement('img');img.src=url;img.alt='Selected product image';img.style.cssText='width:100px;height:100px;object-fit:contain;background:#fff;border-radius:12px;padding:5px;border:1px solid #426b8e';root.append(img);$('productImageStatus').textContent='Product image selected. It will be saved with this product.'}
+ else $('productImageStatus').textContent='No product image selected yet.';
+}
+async function findProductImage(){
+ const name=$('name').value.trim(),statusEl=$('productImageStatus');
+ if(!name){toast('Enter the product name first.');$('name').focus();return}
+ statusEl.textContent='Searching online for a matching product image…';
+ try{
+  const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(name)+'&search_simple=1&action=process&json=1&page_size=8&fields=product_name,image_front_url,image_url,code';
+  const res=await fetch(url);if(!res.ok)throw Error('Image search service is unavailable.');
+  const data=await res.json();const q=name.toLowerCase().split(/\s+/).filter(Boolean);
+  const candidates=(data.products||[]).filter(x=>x.image_front_url||x.image_url).map(x=>({url:x.image_front_url||x.image_url,name:x.product_name||''}));
+  candidates.sort((a,b)=>q.filter(w=>a.name.toLowerCase().includes(w)).length-q.filter(w=>b.name.toLowerCase().includes(w)).length);
+  const best=candidates[candidates.length-1];
+  if(!best)throw Error('No matching image found online. Try uploading a photo from your phone.');
+  $('productImageUrl').value=best.url;showProductImage(best.url);statusEl.textContent='Found online image for: '+(best.name||name)+'. Check it matches the exact product.';
+ }catch(err){statusEl.textContent=(err.message||'Could not find an image.')+' You can upload a photo from your phone instead.';toast('No image found automatically.')}
+}
+$('autoFindImageBtn').onclick=findProductImage;
+$('name').addEventListener('change',()=>{if(!$('productImageUrl').value.trim())findProductImage()});
+$('uploadProductImageBtn').onclick=()=>$('productImageFile').click();
+$('productImageFile').addEventListener('change',async e=>{
+ const file=e.target.files&&e.target.files[0];if(!file)return;
+ if(!file.type.startsWith('image/')){toast('Please choose an image file.');e.target.value='';return}
+ if(file.size>6*1024*1024){toast('Please choose an image smaller than 6 MB.');e.target.value='';return}
+ if(!cloudClient||!cloudSession||!cloudSession.user){toast('Log in to Supabase before uploading a permanent product image.');e.target.value='';return}
+ const statusEl=$('productImageStatus');statusEl.textContent='Uploading image securely to Supabase…';
+ try{
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+  const path=cloudSession.user.id+'/'+(editingId||('new-'+Date.now()+'-'+Math.random().toString(36).slice(2)))+'.'+ext;
+  const {data,error}=await cloudClient.storage.from('product-images').upload(path,file,{contentType:file.type,upsert:true,cacheControl:'3600'});
+  if(error)throw error;
+  const {data:publicData}=cloudClient.storage.from('product-images').getPublicUrl(data.path);
+  $('productImageUrl').value=publicData.publicUrl;showProductImage(publicData.publicUrl);statusEl.textContent='Image uploaded to Supabase Storage. Save the product to sync it across devices.';
+ }catch(err){console.error(err);statusEl.textContent='Image upload failed: '+(err.message||'Check the product-images bucket and its policies.');toast('Image upload failed.')}
+ finally{e.target.value=''}
+});
 function runBarcodeScan(){
  const code=$('scanInput').value.trim(); if(!code){toast('Scan a barcode first');$('scanInput').focus();return}
  const found=products.find(p=>String(p.barcode||'').trim()===code||String(p.sku||'').trim()===code);
@@ -417,7 +456,7 @@ $('navScan')?.addEventListener('click',()=>{$('scannerPanel').scrollIntoView({be
 
 $('productForm').addEventListener('submit',async e=>{
  e.preventDefault();
- const data={name:$('name').value.trim(),barcode:$('barcode').value.trim(),sku:$('sku').value.trim(),stock:Math.max(0,parseInt($('stock').value||0,10)),minStock:Math.max(0,parseInt($('minStock').value||0,10)),expiry:$('expiry').value,batch:$('batch').value.trim(),notes:$('notes').value.trim()};
+ const data={name:$('name').value.trim(),image_url:$('productImageUrl').value.trim(),barcode:$('barcode').value.trim(),sku:$('sku').value.trim(),stock:Math.max(0,parseInt($('stock').value||0,10)),minStock:Math.max(0,parseInt($('minStock').value||0,10)),expiry:$('expiry').value,batch:$('batch').value.trim(),notes:$('notes').value.trim()};
  if(!data.name){toast('Enter product name');return}
  const saveBtn=$('saveBtn'), oldText=saveBtn.textContent, wasEditing=!!editingId;
  saveBtn.disabled=true;
@@ -851,8 +890,8 @@ function initCloudClient(){
  if(!window.supabase||!window.supabase.createClient){setCloudStatus('Supabase library could not load. Connect to the internet and reopen this file.');return false}
  try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'all-items-stock-expiry-auth-v1'}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
 }
-function toCloud(p,owner){return {id:String(p.id),owner_id:owner,name:String(p.name||''),barcode:String(p.barcode||''),sku:String(p.sku||''),stock:Math.max(0,Number(p.stock)||0),min_stock:Math.max(0,Number(p.minStock)||0),expiry:p.expiry||null,batch:String(p.batch||''),notes:String(p.notes||''),updated_at:new Date().toISOString()}}
-function fromCloud(r){return {id:String(r.id),name:r.name||'',barcode:r.barcode||'',sku:r.sku||'',stock:Number(r.stock)||0,minStock:Number(r.min_stock)||0,expiry:r.expiry||'',batch:r.batch||'',notes:r.notes||'',createdAt:r.created_at||r.updated_at||new Date().toISOString()}}
+function toCloud(p,owner){return {id:String(p.id),owner_id:owner,name:String(p.name||''),image_url:String(p.image_url||''),barcode:String(p.barcode||''),sku:String(p.sku||''),stock:Math.max(0,Number(p.stock)||0),min_stock:Math.max(0,Number(p.minStock)||0),expiry:p.expiry||null,batch:String(p.batch||''),notes:String(p.notes||''),updated_at:new Date().toISOString()}}
+function fromCloud(r){return {id:String(r.id),name:r.name||'',image_url:r.image_url||'',barcode:r.barcode||'',sku:r.sku||'',stock:Number(r.stock)||0,minStock:Number(r.min_stock)||0,expiry:r.expiry||'',batch:r.batch||'',notes:r.notes||'',createdAt:r.created_at||r.updated_at||new Date().toISOString()}}
 async function fetchCloudProducts(){
  if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
  // Supabase/PostgREST normally returns only a limited page (often 1,000 rows); fetch all pages.
