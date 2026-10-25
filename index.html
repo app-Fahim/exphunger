@@ -389,13 +389,16 @@ function renderDashboardInsights(){
 }
 function cleanProductNotes(value){
  let s=String(value||'');
- // Remove legacy spreadsheet-import annotations, including repeated copies.
- s=s.replace(/(?:^|\s*[|·]\s*)Imported file data[\s\S]*$/i,'');
- s=s.replace(/(?:^|\s*[|·]\s*)Source sheet\s*:\s*[^|·\n]*/gi,'');
- // Remove internal stock/upload/history markers, including HTML-escaped or backslash-escaped brackets.
- s=s.replace(/(?:&#91;|&#x5b;|\\?\[){2}\s*EXPHUNGER\\?_(?:FILE_STOCK|LAST_SKU_UPLOAD|STOCK_HISTORY)[\s\S]*$/gi,'');
- s=s.replace(/EXPHUNGER\\?_STOCK_HISTORY[\s\S]*$/gi,'');
- s=s.replace(/(?:&#93;|&#x5d;|\\?\]){2}/gi,'');
+ // Normalize spreadsheet/HTML escaped legacy metadata before cleaning old cloud records.
+ s=s.replace(/&amp;/gi,'&').replace(/&#91;|&#x5b;|&lbrack;/gi,'[').replace(/&#93;|&#x5d;|&rbrack;/gi,']');
+ s=s.replace(/\\_/g,'_');
+ // Remove any imported-file annotation and everything after it, including repeated source-sheet labels.
+ const importedAt=s.search(/imported\s+file\s+data/i);
+ if(importedAt>=0)s=s.slice(0,importedAt);
+ // Remove internal metadata markers regardless of whether the brackets/underscore were escaped.
+ s=s.replace(/\[\[\s*EXPHUNGER\s*_\s*(?:FILE_STOCK|LAST_SKU_UPLOAD|STOCK_HISTORY)\s*=[\s\S]*$/i,'');
+ s=s.replace(/EXPHUNGER\s*_\s*(?:FILE_STOCK|LAST_SKU_UPLOAD|STOCK_HISTORY)\s*=[\s\S]*$/i,'');
+ s=s.replace(/(?:^|\s*[|·]\s*)Source\s+sheet\s*:\s*[^|·\n]*/gi,'');
  return s.replace(/^[\s|·]+|[\s|·]+$/g,'').replace(/\s*[|·]\s*[|·]\s*/g,' · ').trim();
 }
 function render(){
