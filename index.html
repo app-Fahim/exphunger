@@ -686,7 +686,7 @@ function renderExpiry(){
    if(isExpiring){const warn=document.createElement('span');warn.className='pill expiring-month-pill';warn.textContent='⚠ Expires within 30 days';pills.append(warn)}
    const exp=document.createElement('div');exp.className='meta'+(isExpiring?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(exp);
    const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);
-   const actions=document.createElement('div');actions.className='actions';const editBtn=document.createElement('button');editBtn.className='btn-secondary';editBtn.textContent='✎ Edit';editBtn.onclick=()=>edit(p.id);actions.append(editBtn);
+   const actions=document.createElement('div');actions.className='actions';
    card.append(left,qty,actions);root.append(card);
  });
 }
