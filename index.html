@@ -1157,7 +1157,7 @@ function initCloudClient(){
  const cfg=getConfig();
  if(!cfg||!cfg.url||!cfg.key){cloudClient=null;updateConnectionSettingsUI();return false}
  if(!window.supabase||!window.supabase.createClient){setCloudStatus('Supabase library could not load. Connect to the internet and reopen this file.');return false}
- try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'all-items-stock-expiry-auth-v1'}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
+ try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
 }
 function toCloud(p,owner){
  const cleanNotes=cleanProductNotes(p.notes).replace(/\n?\[\[EXPHUNGER_FILE_STOCK=[+-]?\d+(?:\.\d+)?\]\]/g,'').replace(/\n?\[\[EXPHUNGER_LAST_SKU_UPLOAD=[^\]]+\]\]/g,'').replace(/\n?\[\[EXPHUNGER_STOCK_HISTORY=[^\]]+\]\]/g,'').trim();
@@ -1429,7 +1429,7 @@ if(cloudClient){cloudClient.auth.onAuthStateChange((event,session)=>{
   $('headerLogout').classList.add('hidden');
  }
 });}
-updateAuthUI().catch(e=>{console.error(e);setCloudStatus('Could not initialize cloud session. Local data is preserved.');});
+updateAuthUI().catch(e=>{console.error('Cloud startup failed:',e);const detail=(e&&e.message)?e.message:String(e||'unknown error');setCloudStatus('Cloud startup failed: '+detail+'. Check internet, Supabase URL/key, and browser storage settings. Local data is preserved.');const overlay=$('authOverlay');if(overlay)overlay.classList.remove('hidden');document.body.classList.add('auth-locked');const logout=$('headerLogout');if(logout)logout.classList.add('hidden');});
 // Refresh the account's cloud data when the user returns to this tab/device.
 let cloudRefreshInProgress=false;
 async function refreshCloudWhenVisible(){
