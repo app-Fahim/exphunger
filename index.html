@@ -880,8 +880,17 @@ async function deleteCloudProduct(id){if(!cloudClient||!cloudSession)throw new E
  // can finish after this DELETE and recreate the just-deleted row in Supabase.
  while(cloudBusy){await new Promise(resolve=>setTimeout(resolve,50));}
  cloudBusy=true;
- try{const {error}=await cloudClient.from('products').delete().eq('owner_id',cloudSession.user.id).eq('id',String(id));if(error)throw error;setCloudStatus('Connected · deletion synced.');}
- finally{cloudBusy=false;}
+ try{
+  const userId=cloudSession.user.id;
+  const {data:deletedRows,error}=await cloudClient.from('products').delete().eq('owner_id',userId).eq('id',String(id)).select('id');
+  if(error)throw new Error('Supabase DELETE failed: '+error.message);
+  // PostgREST may return no error when Row Level Security silently blocks DELETE.
+  // Confirm the row is truly gone before removing it from the UI/cache.
+  const {data:remaining,error:checkError}=await cloudClient.from('products').select('id').eq('owner_id',userId).eq('id',String(id)).limit(1);
+  if(checkError)throw new Error('Could not verify deletion: '+checkError.message);
+  if(remaining&&remaining.length)throw new Error('Supabase did not delete this product. Your products table needs an owner-only DELETE RLS policy. Open Supabase SQL Editor and run the DELETE policy SQL provided in the chat, then try again.');
+  setCloudStatus('Connected · deletion verified in cloud.');
+ }finally{cloudBusy=false;}
 }
 async function restoreCloudSafely(){
  // Strict account isolation: cloud is the source of truth after login.
