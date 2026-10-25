@@ -525,6 +525,45 @@ function pickColumn(headers,candidates){return headers.findIndex(h=>candidates.i
 function excelDate(v){if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);if(typeof v==='number'&&window.XLSX&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}const t=String(v??'').trim();if(/^\d{5}(?:\.\d+)?$/.test(t)&&window.XLSX&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(Number(t));if(d&&d.y>1900)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}if(!t)return '';if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(t)){const [y,m,d]=t.split('-');return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}return ''}
 $('skuImportBtn').onclick=()=>$('skuFile').click();
 $('templateBtn').onclick=()=>download('store-sku-template.csv','\ufeffProduct Name,Barcode,SKU,Stock,Expiry Date,Batch,Notes\r\nOreo Biscuit,7622200600013,SKU001,25,2027-12-31,BATCH01,Stock is optional; leave blank if unavailable\r\n','text/csv;charset=utf-8;');
+// Persist large SKU imports in IndexedDB so a reload can resume cloud upload.
+const SKU_QUEUE_DB='allItemsSkuImportQueueV1';
+function skuQueueDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(SKU_QUEUE_DB,1);req.onupgradeneeded=()=>req.result.createObjectStore('queue');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function saveSkuQueue(value){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const tx=db.transaction('queue','readwrite');tx.objectStore('queue').put(value,'pending');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+async function readSkuQueue(){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const req=db.transaction('queue','readonly').objectStore('queue').get('pending');req.onsuccess=()=>{const v=req.result||null;db.close();resolve(v);};req.onerror=()=>{db.close();reject(req.error);};});}
+async function clearSkuQueue(){const db=await skuQueueDB();return new Promise((resolve,reject)=>{const tx=db.transaction('queue','readwrite');tx.objectStore('queue').delete('pending');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+let skuResumeRunning=false;
+async function resumePendingSkuImport(){
+ if(skuResumeRunning||!cloudClient||!cloudSession)return;
+ let queue;try{queue=await readSkuQueue();}catch(err){console.error('Could not read pending SKU import',err);return;}
+ if(!queue||queue.ownerId!==cloudSession.user.id)return;
+ skuResumeRunning=true;const out=$('skuImportResult');
+ try{
+  const items=queue.items||[];let i=Number(queue.nextIndex)||0;let batchSize=100;
+  if(out)out.textContent=`Resuming saved SKU upload: ${i.toLocaleString()} / ${items.length.toLocaleString()} products…`;
+  while(i<items.length){
+   if(!cloudClient||!cloudSession||cloudSession.user.id!==queue.ownerId)throw new Error('Upload paused because the logged-in account changed. Log back into the same account to resume.');
+   const batch=items.slice(i,i+batchSize).map(p=>toCloud(p,queue.ownerId));
+   const {error}=await cloudClient.from('products').upsert(batch,{onConflict:'owner_id,id'});
+   if(error){const message=String(error.message||error.details||'');if(batchSize>10&&/statement timeout|canceling statement|timeout/i.test(message)){batchSize=Math.max(10,Math.floor(batchSize/2));continue;}throw new Error('Cloud save failed near product '+(i+1)+': '+message);}
+   i+=batch.length;queue.nextIndex=i;await saveSkuQueue(queue);
+   if(out)out.textContent=`Saving to cloud: ${i.toLocaleString()} / ${items.length.toLocaleString()} products… (reload will resume)`;
+   setCloudStatus(`Uploading SKU file: ${i.toLocaleString()} / ${items.length.toLocaleString()}`);
+  }
+  const ids=items.map(p=>String(p.id));const foundIds=new Set();
+  for(let j=0;j<ids.length;j+=400){
+   const {data,error}=await cloudClient.from('products').select('id').eq('owner_id',queue.ownerId).in('id',ids.slice(j,j+400));
+   if(error)throw new Error('Upload finished but cloud verification failed: '+error.message);
+   for(const row of data||[])foundIds.add(String(row.id));
+   if(out)out.textContent=`Verifying cloud save: ${Math.min(j+400,ids.length).toLocaleString()} / ${ids.length.toLocaleString()} products…`;
+  }
+  const missing=ids.filter(id=>!foundIds.has(id)).length;
+  if(missing)throw new Error(`Cloud verification found ${missing} imported product(s) missing.`);
+  await clearSkuQueue();await restoreCloudSafely();
+  if(out)out.textContent=`Import & Cloud Sync successful: ${Number(queue.added||0).toLocaleString()} new products, ${Number(queue.updated||0).toLocaleString()} matched products updated, ${Number(queue.skipped||0).toLocaleString()} empty rows skipped. Verified ${foundIds.size.toLocaleString()} products in your account.`;
+  toast('SKU import saved and verified in cloud');
+ }catch(err){console.error(err);if(out)out.textContent='Upload paused safely: '+(err.message||'check connection')+'. Your progress is saved on this device; reload or log in again to resume.';setCloudStatus('SKU upload paused; saved progress will resume after reload/login.');}
+ finally{skuResumeRunning=false;}
+}
 $('skuFile').onchange=async e=>{
  const f=e.target.files[0];if(!f)return;const out=$('skuImportResult');
  if(!cloudClient||!cloudSession){out.textContent='Log in to your own Supabase account before uploading the SKU file. Without login, uploaded data will not be available on other devices or after a later login.';toast('Log in before importing.');e.target.value='';return;}
@@ -600,39 +639,11 @@ $('skuFile').onchange=async e=>{
    }
   }
   if(added+updated===0)throw Error('No usable product rows found. Check that the file contains at least a product name, SKU or barcode.');
-  // Upload only imported rows in small, retryable batches. Supports large SKU files without
-  // sending all existing products on every request or hitting statement timeouts.
-  render();out.textContent=`Parsed ${dataRows.length.toLocaleString()} rows. Waiting to save ${importedProducts.size.toLocaleString()} products to cloud…`;
-  while(cloudBusy)await new Promise(resolve=>setTimeout(resolve,100));
-  cloudBusy=true;
-  try{
-   const items=Array.from(importedProducts.values());
-   let batchSize=100;
-   for(let i=0;i<items.length;){
-    const batch=items.slice(i,i+batchSize).map(p=>toCloud(p,cloudSession.user.id));
-    const {error}=await cloudClient.from('products').upsert(batch,{onConflict:'owner_id,id'});
-    if(error){
-     const message=String(error.message||error.details||'');
-     if(batchSize>10&&/statement timeout|canceling statement|timeout/i.test(message)){batchSize=Math.max(10,Math.floor(batchSize/2));continue;}
-     throw new Error('Cloud save failed near product '+(i+1)+': '+message);
-    }
-    i+=batch.length;
-    out.textContent=`Saving to cloud: ${Math.min(i,items.length).toLocaleString()} / ${items.length.toLocaleString()} products…`;
-    setCloudStatus(`Uploading SKU file: ${Math.min(i,items.length).toLocaleString()} / ${items.length.toLocaleString()}`);
-   }
-  }finally{cloudBusy=false;}
-  safeCacheProducts();
-  // Verify only this import's IDs, not every product in the account (which can itself time out).
-  const ids=Array.from(importedProducts.keys());const foundIds=new Set();
-  for(let i=0;i<ids.length;i+=400){
-   const {data,error}=await cloudClient.from('products').select('id').eq('owner_id',cloudSession.user.id).in('id',ids.slice(i,i+400));
-   if(error)throw new Error('Upload finished but cloud verification failed: '+error.message);
-   for(const row of data||[])foundIds.add(String(row.id));
-   out.textContent=`Verifying cloud save: ${Math.min(i+400,ids.length).toLocaleString()} / ${ids.length.toLocaleString()} products…`;
-  }
-  const missingCloud=ids.filter(id=>!foundIds.has(id)).length;
-  if(missingCloud)throw Error(`Cloud verification found ${missingCloud} imported product(s) missing. Do not log out yet; check connection/RLS and retry.`);
-  out.textContent=`Import & Cloud Sync successful: ${added.toLocaleString()} new products, ${updated.toLocaleString()} matched products updated, ${skipped.toLocaleString()} empty rows skipped. Verified ${foundIds.size.toLocaleString()} imported products in your account. Missing fields can be completed later from Products → Edit.`;toast('SKU import saved and verified in cloud');
+  // Save the parsed import locally before network upload. Batch progress is checkpointed.
+  const queue={ownerId:cloudSession.user.id,items:Array.from(importedProducts.values()),nextIndex:0,added,updated,skipped,createdAt:new Date().toISOString()};
+  await saveSkuQueue(queue);
+  render();out.textContent=`Import prepared: ${queue.items.length.toLocaleString()} products saved as a resumable upload. Navigation is safe; reload will resume after login.`;
+  await resumePendingSkuImport();
  }catch(err){out.textContent=err.message||'Could not read this file. Try CSV UTF-8 or Excel .xlsx.'}finally{e.target.value=''}
 };
 
@@ -1050,7 +1061,7 @@ async function updateAuthUI(){
   switchUserStorage(cloudSession.user.id);
   // Authentication success should unlock the app even if the products table is not ready.
   document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
-  try{await restoreCloudSafely();}
+  try{await restoreCloudSafely();await resumePendingSkuImport();}
   catch(e){console.error(e);setCloudStatus('Logged in, but cloud data could not load: '+(e.message||'check products table and RLS policies')+'. Local data is preserved.');}
  } else {$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');}
 }
