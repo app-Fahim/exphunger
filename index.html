@@ -692,7 +692,34 @@ $('productForm').addEventListener('submit',async e=>{
  }finally{saveBtn.disabled=false;saveBtn.textContent=wasEditing?'Save Changes':oldText;}
 });
 $('cancelEdit').onclick=()=>{const wasEditing=!!editingId;resetForm();if(wasEditing){closeNavPage();openNavPage('Products',[$('findPanel'),document.querySelector('.section-title'),$('productList')],'navProducts')}};
-function recordStockHistory(p,before,after,action='Stock change'){if(!p)return;p.stockHistory=Array.isArray(p.stockHistory)?p.stockHistory:[];p.stockHistory.push({at:new Date().toISOString(),before:Number(before)||0,after:Number(after)||0,action,by:cloudSession?.user?.email||'Local session'});p.stockHistory=p.stockHistory.slice(-20)}function changeStock(id,delta){const p=products.find(x=>x.id===id);if(!p)return;const v=Number(p.stock)||0;if(delta<0&&v<=0){toast('Stock is already 0');return}p.stock=Math.max(0,v+delta);recordStockHistory(p,v,p.stock,delta>0?'Stock increase':'Stock decrease');persist();render();toast('Stock updated')}
+function recordStockHistory(p,before,after,action='Stock change'){if(!p)return;p.stockHistory=Array.isArray(p.stockHistory)?p.stockHistory:[];p.stockHistory.push({at:new Date().toISOString(),before:Number(before)||0,after:Number(after)||0,action,by:cloudSession?.user?.email||'Local session'});p.stockHistory=p.stockHistory.slice(-20)}
+async function saveStockChangeToCloud(product){
+ if(!cloudClient||!cloudSession)return;
+ // Wait for any full-list/import sync to finish, then write this exact product's latest stock.
+ while(cloudBusy)await new Promise(resolve=>setTimeout(resolve,50));
+ if(!cloudSession||!cloudClient)throw new Error('Cloud login is required to save stock.');
+ const ownerId=cloudSession.user.id;
+ cloudBusy=true;
+ try{
+  const {error}=await cloudClient.from('products').upsert(toCloud(product,ownerId),{onConflict:'owner_id,id'});
+  if(error)throw new Error('Cloud stock save failed: '+error.message);
+  const {data,error:verifyError}=await cloudClient.from('products').select('stock').eq('owner_id',ownerId).eq('id',String(product.id)).limit(1);
+  if(verifyError)throw new Error('Stock save verification failed: '+verifyError.message);
+  if(!data||!data.length||Number(data[0].stock)!==Number(product.stock))throw new Error('Cloud stock verification did not match the new quantity.');
+  setCloudStatus('Connected · stock saved and verified in cloud.');
+ }finally{cloudBusy=false;}
+ if(syncRequested){syncProducts().catch(e=>{console.error(e);setCloudStatus('Cloud sync failed: '+(e.message||'check connection/table policies'));});}
+}
+async function changeStock(id,delta){
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ const v=Number(p.stock)||0;if(delta<0&&v<=0){toast('Stock is already 0');return}
+ const next=Math.max(0,v+delta);p.stock=next;recordStockHistory(p,v,next,delta>0?'Stock increase':'Stock decrease');
+ safeCacheProducts();render();
+ if(cloudClient&&cloudSession){
+  try{await saveStockChangeToCloud(p);safeCacheProducts();toast('Stock updated and saved to cloud.');}
+  catch(e){console.error(e);setCloudStatus(e.message||'Cloud stock save failed.');toast('Stock changed on this device, but cloud save failed. Keep this page open and retry.');}
+ }else{toast('Stock updated on this device only. Log in to sync it to cloud.');}
+}
 async function removeProduct(id){const p=products.find(x=>x.id===id);if(!p)return;if(!cloudClient||!cloudSession||!cloudSession.user||!cloudSession.user.email){toast('Log in to your Supabase account before deleting products.');return;}if(!confirm(`“${p.name}” Delete this product?`))return;const email=cloudSession.user.email;const password=window.prompt('Enter the password for '+email+' to update this product:');if(password===null)return;if(!password){toast('No password entered. The product was not deleted.');return;}try{const userId=cloudSession.user.id;const {data:authData,error:authError}=await cloudClient.auth.signInWithPassword({email,password});if(authError)throw authError;if(!authData.user||authData.user.id!==userId)throw new Error('Account verification mismatch.');cloudSession=authData.session||cloudSession;await deleteCloudProduct(id);products=products.filter(x=>x.id!==id);safeCacheProducts();render();toast('Password verified. Product deleted.');
  // If another change requested a sync while deletion held the lock, flush the current
  // product list only after the deleted ID has been removed from local state.
