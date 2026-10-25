@@ -945,7 +945,7 @@ function initCloudClient(){
  const cfg=getConfig();
  if(!cfg||!cfg.url||!cfg.key){cloudClient=null;updateConnectionSettingsUI();return false}
  if(!window.supabase||!window.supabase.createClient){setCloudStatus('Supabase library could not load. Connect to the internet and reopen this file.');return false}
- try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'all-items-stock-expiry-auth-v1'}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
+ try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'all-items-stock-expiry-auth-v1'}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
 }
 function toCloud(p,owner){
  const cleanNotes=String(p.notes||'').replace(/\n?\[\[EXPHUNGER_FILE_STOCK=[+-]?\d+(?:\.\d+)?\]\]/g,'').replace(/\n?\[\[EXPHUNGER_LAST_SKU_UPLOAD=[^\]]+\]\]/g,'').trim();
@@ -1067,7 +1067,7 @@ async function updateAuthUI(){
  if(error){setCloudStatus('Session check failed: '+error.message);$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');return;}
  cloudSession=data.session;
  if(cloudSession){
-  // Keep the Supabase session across short idle periods and browser reopen; only explicit Log Out clears it.
+  // Sessions are intentionally memory-only: reloading/reopening the page requires email and password again.
   switchUserStorage(cloudSession.user.id);
   // Authentication success should unlock the app even if the products table is not ready.
   document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
