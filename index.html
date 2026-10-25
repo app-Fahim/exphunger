@@ -496,17 +496,27 @@ $('skuImportBtn').addEventListener('click',async()=>{
  try{
   const buffer=await file.arrayBuffer();
   const workbook=XLSX.read(buffer,{type:'array',cellDates:true});
-  const sheet=workbook.Sheets[workbook.SheetNames[0]];
-  const rawRows=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true});
+  // Read every worksheet, not only the first one, so no sheet is silently ignored.
+  const rawRows=[];
+  for(const sheetName of workbook.SheetNames){
+   const sheet=workbook.Sheets[sheetName];
+   const sheetRows=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true});
+   for(const row of sheetRows){row.__sourceSheet=sheetName;rawRows.push(row);}
+  }
   if(!rawRows.length)throw new Error('The selected file has no product rows.');
   const accountId=cloudSession.user.id;
   const bySku=new Map(),byBarcode=new Map(),byName=new Map();
   products.forEach(p=>{const sku=String(p.sku||'').trim().toLowerCase(),bar=String(p.barcode||'').trim(),name=String(p.name||'').trim().toLowerCase();if(sku&&!bySku.has(sku))bySku.set(sku,p);if(bar&&!byBarcode.has(bar))byBarcode.set(bar,p);if(name&&!byName.has(name))byName.set(name,p);});
   const changed=[],createdIds=new Set();let skipped=0,updated=0,added=0;
   for(const row of rawRows){
-   const name=String(skuCell(row,['Product Name','Product','Item Name','Description','Name','สินค้า','اسم المنتج'])).trim();
+   const rowKeys=Object.keys(row).filter(k=>k!=='__sourceSheet');
+   // Try common product-name headers; if the source uses a different heading,
+   // use the first non-empty cell so that the row is still imported.
+   const nameValue=skuCell(row,['Product Name','Product','Item Name','Item Description','Description','Name','Product Title','Item','สินค้า','اسم المنتج']);
+   const fallbackName=rowKeys.map(k=>row[k]).find(v=>v!==''&&v!==null&&v!==undefined);
+   const name=String(nameValue!==''?nameValue:(fallbackName??'')).trim();
    if(!name){skipped++;continue;}
-   const sku=String(skuCell(row,['SKU','SKU Code','Item Code','Item No','Item Number','Product Code','Code'])).trim();
+   const sku=String(skuCell(row,['SKU','SKU Code','Item Code','Item No','Item Number','Product Code','Code','PLU'])).trim();
    const barcode=String(skuCell(row,['Barcode','Bar Code','EAN','UPC','GTIN'])).trim();
    const stockRaw=skuCell(row,['Stock','Current Stock','Qty','Quantity','On Hand','Available Stock','Balance','Stock (Packets)']);
    const hasStock=stockRaw!==''&&stockRaw!==null&&stockRaw!==undefined&&Number.isFinite(Number(String(stockRaw).replace(/,/g,'')))&&Number(String(stockRaw).replace(/,/g,''))>=0;
@@ -516,14 +526,19 @@ $('skuImportBtn').addEventListener('click',async()=>{
    const stock=hasStock?Math.floor(Number(String(stockRaw).replace(/,/g,''))):(existing?Math.max(0,Number(existing.stock)||0):0);
    const minStock=minRaw!==''&&Number.isFinite(Number(minRaw))?Math.max(0,Math.floor(Number(minRaw))):(existing?Math.max(0,Number(existing.minStock)||0):5);
    const batch=String(skuCell(row,['Batch','Batch No','Lot','Lot Number'])).trim()||(existing?.batch||'');
-   const notes=String(skuCell(row,['Notes','Remarks','Location','Shelf'])).trim()||(existing?.notes||'');
+   const standardHeaders=new Set(['product name','product','item name','item description','description','name','product title','item','สินค้า','اسم المنتج','sku','sku code','item code','item no','item number','product code','code','plu','barcode','bar code','ean','upc','gtin','stock','current stock','qty','quantity','on hand','available stock','balance','stock (packets)','expiry date','expiry','expiration date','best before','expire date','minimum stock','min stock','low stock alert','reorder level','batch','batch no','lot','lot number','notes','remarks','location','shelf']);
+   const extraFields=rowKeys.filter(k=>!standardHeaders.has(String(k).trim().toLowerCase())).map(k=>String(k)+': '+String(row[k]??'').trim()).filter(v=>!v.endsWith(': '));
+   const sourceSheet=row.__sourceSheet?'Source sheet: '+row.__sourceSheet:'';
+   const importedDetails=[sourceSheet,...extraFields].filter(Boolean).join(' | ');
+   const oldNotes=String(existing?.notes||skuCell(row,['Notes','Remarks','Location','Shelf'])||'').trim();
+   const notes=[oldNotes,importedDetails?'Imported file data — '+importedDetails:''].filter(Boolean).join(' | ');
    const p=existing?{...existing,name,sku:sku||existing.sku||'',barcode:barcode||existing.barcode||'',stock,minStock,expiry:expiry||existing.expiry||'',batch,notes}:{id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)),name,image_url:'',barcode,sku,stock,minStock,expiry,batch,notes,createdAt:new Date().toISOString(),stockHistory:[]};
    if(existing&&hasStock&&Number(existing.stock)!==stock)recordStockHistory(p,existing.stock,stock,'SKU file import');
    changed.push(p);
    if(existing){updated++;}else{added++;createdIds.add(String(p.id));}
    if(sku)bySku.set(sku.toLowerCase(),p);if(barcode)byBarcode.set(barcode,p);byName.set(name.toLowerCase(),p);
   }
-  if(!changed.length)throw new Error('No valid products found. Make sure the file has a Product Name column.');
+  if(!changed.length)throw new Error('No rows with any usable cell values were found in the selected file.');
   statusEl.textContent='Importing '+changed.length.toLocaleString()+' row(s) to cloud…';
   // Block background full-list sync while this import writes its batches.
   while(cloudBusy)await new Promise(resolve=>setTimeout(resolve,50));
@@ -544,7 +559,7 @@ $('skuImportBtn').addEventListener('click',async()=>{
    }
   }finally{cloudBusy=false;lockHeld=false;}
   setCloudStatus('Connected · SKU file import saved to Supabase.');
-  statusEl.textContent='Import complete: '+added.toLocaleString()+' added, '+updated.toLocaleString()+' updated, '+skipped.toLocaleString()+' row(s) skipped.';
+  statusEl.textContent='Import complete: '+added.toLocaleString()+' added, '+updated.toLocaleString()+' updated, '+skipped.toLocaleString()+' completely empty row(s) skipped. All worksheets processed; extra columns saved in product Notes.';
   toast('SKU file imported and saved to cloud.');
  }catch(err){console.error(err);statusEl.textContent='Import stopped: '+(err.message||'Please check the file and cloud connection')+'. Any batches already saved remain in cloud.';setCloudStatus('SKU import failed: '+(err.message||'check file and cloud connection'));}
  finally{if(lockHeld){cloudBusy=false;}btn.disabled=false;}
