@@ -267,7 +267,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 </form>
 <div class="panel" id="skuImportPanel" style="margin-top:14px">
  <h3>📄 Upload SKU File</h3>
- <p class="notice">Upload an Excel (.xlsx, .xls) or CSV file to add/update products. Product Name is required; SKU/Item Code is recommended. Barcode and Stock are optional. If Stock is missing, existing stock will be kept.</p>
+ <p class="notice">Upload an Excel (.xlsx, .xls) or CSV file. All worksheets and non-empty rows are processed. Product Name is detected automatically where possible; other columns are preserved in Notes. SKU, Barcode and Stock are optional. If Stock is missing, existing stock is kept.</p>
  <div class="field"><label for="skuImportFile">Choose SKU / product file</label><input class="input" id="skuImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></div>
  <div class="form-actions" style="margin-top:10px"><button type="button" id="skuImportBtn">Upload & Import SKU File</button><button type="button" class="btn-secondary" id="skuImportClearBtn">Clear File</button></div>
  <div class="notice" id="skuImportStatus" style="margin-top:10px">No file selected.</div>
