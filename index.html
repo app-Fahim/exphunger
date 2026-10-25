@@ -415,25 +415,48 @@ $('scanBtn').onclick=runBarcodeScan;
 $('scanInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBarcodeScan()}});
 $('navScan')?.addEventListener('click',()=>{$('scannerPanel').scrollIntoView({behavior:'smooth'});$('scanInput').focus()});
 
-$('productForm').addEventListener('submit',async e=>{e.preventDefault();const data={name:$('name').value.trim(),barcode:$('barcode').value.trim(),sku:$('sku').value.trim(),stock:Math.max(0,parseInt($('stock').value||0,10)),minStock:Math.max(0,parseInt($('minStock').value||0,10)),expiry:$('expiry').value,batch:$('batch').value.trim(),notes:$('notes').value.trim()};
-if(!data.name){toast('Enter product name');return}
-if(editingId){
- if(!cloudClient||!cloudSession||!cloudSession.user||!cloudSession.user.email){toast('Log in to your Supabase account to edit products.');return;}
- const password=window.prompt('Enter the password for '+cloudSession.user.email+' to update this product:');
- if(password===null)return;
- if(!password){toast('Enter a password. The product was not updated.');return;}
- const saveBtn=$('saveBtn');saveBtn.disabled=true;saveBtn.textContent='Verifying password…';
+$('productForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const data={name:$('name').value.trim(),barcode:$('barcode').value.trim(),sku:$('sku').value.trim(),stock:Math.max(0,parseInt($('stock').value||0,10)),minStock:Math.max(0,parseInt($('minStock').value||0,10)),expiry:$('expiry').value,batch:$('batch').value.trim(),notes:$('notes').value.trim()};
+ if(!data.name){toast('Enter product name');return}
+ const saveBtn=$('saveBtn'), oldText=saveBtn.textContent;
+ saveBtn.disabled=true;
  try{
-  const {data:authData,error:authError}=await cloudClient.auth.signInWithPassword({email:cloudSession.user.email,password});
-  if(authError)throw authError;
-  if(!authData.user||authData.user.id!==cloudSession.user.id)throw new Error('The logged-in account could not be verified.');
-  cloudSession=authData.session||cloudSession;
-  const i=products.findIndex(p=>p.id===editingId);if(i<0)throw new Error('This product is no longer in the list.');
-  products[i]={...products[i],...data};
-  persist();resetForm();render();toast('Password verified. Saving product changes.');
- }catch(err){console.error(err);toast('Incorrect password or verification failed. The product was not updated.');setCloudStatus('Edit password verification failed: '+(err.message||'check password and connection'));}
- finally{saveBtn.disabled=false;if(editingId)saveBtn.textContent='Save Changes';}
-}else{products.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),...data,createdAt:new Date().toISOString()});persist();resetForm();render();toast('New product saved')}
+  let candidate;
+  if(editingId){
+   if(!cloudClient||!cloudSession||!cloudSession.user||!cloudSession.user.email)throw new Error('Log in to your Supabase account to edit products.');
+   const email=cloudSession.user.email;
+   const password=window.prompt('Enter the password for '+email+' to update this product:');
+   if(password===null)return;
+   if(!password)throw new Error('Enter your password. The product was not updated.');
+   saveBtn.textContent='Verifying password…';
+   const userId=cloudSession.user.id;
+   const {data:authData,error:authError}=await cloudClient.auth.signInWithPassword({email,password});
+   if(authError)throw authError;
+   if(!authData.user||authData.user.id!==userId)throw new Error('The logged-in account could not be verified.');
+   cloudSession=authData.session||cloudSession;
+   const old=products.find(p=>String(p.id)===String(editingId));
+   if(!old)throw new Error('This product is no longer in the list.');
+   candidate={...old,...data};
+  }else{
+   candidate={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),...data,createdAt:new Date().toISOString()};
+  }
+  if(cloudClient&&cloudSession){
+   saveBtn.textContent='Saving to cloud…';
+   const row=toCloud(candidate,cloudSession.user.id);
+   const {error}=await cloudClient.from('products').upsert(row,{onConflict:'owner_id,id'});
+   if(error)throw new Error('Cloud save failed: '+error.message);
+  }
+  if(editingId){const i=products.findIndex(p=>String(p.id)===String(editingId));if(i<0)throw new Error('Product is no longer in the list.');products[i]=candidate;}
+  else products.push(candidate);
+  safeCacheProducts();render();resetForm();
+  if(cloudClient&&cloudSession)setCloudStatus('Connected · product saved to Supabase at '+new Date().toLocaleTimeString());
+  toast(editingId?'Product updated in cloud.':'New product saved'+(cloudClient&&cloudSession?' to cloud.':'.'));
+ }catch(err){
+  console.error(err);
+  toast(err.message||'Product could not be saved.');
+  setCloudStatus('Product save failed: '+(err.message||'check connection and Supabase policies'));
+ }finally{saveBtn.disabled=false;saveBtn.textContent=editingId?'Save Changes':oldText;}
 });
 $('cancelEdit').onclick=()=>{const wasEditing=!!editingId;resetForm();if(wasEditing){closeNavPage();openNavPage('Products',[$('findPanel'),document.querySelector('.section-title'),$('productList')],'navProducts')}};
 function changeStock(id,delta){const p=products.find(x=>x.id===id);if(!p)return;const v=Number(p.stock)||0;if(delta<0&&v<=0){toast('Stock is already 0');return}p.stock=Math.max(0,v+delta);persist();render();toast('Stock updated')}
