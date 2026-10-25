@@ -554,20 +554,22 @@ async function resumePendingSkuImport(){
  }
  skuResumeRunning=true;const out=$('skuImportResult');
  try{
-  const items=queue.items||[];let i=Number(queue.nextIndex)||0;let batchSize=100;
+  const items=queue.items||[];let i=Number(queue.nextIndex)||0;let batchSize=250;
   if(out)out.textContent=`Resuming saved SKU upload: ${i.toLocaleString()} / ${items.length.toLocaleString()} products…`;
   while(i<items.length){
    if(!cloudClient||!cloudSession||cloudSession.user.id!==queue.ownerId)throw new Error('Upload paused because the logged-in account changed. Log back into the same account to resume.');
    const batch=items.slice(i,i+batchSize).map(p=>toCloud(p,queue.ownerId));
    const {error}=await cloudClient.from('products').upsert(batch,{onConflict:'owner_id,id'});
-   if(error){const message=String(error.message||error.details||'');if(batchSize>10&&/statement timeout|canceling statement|timeout/i.test(message)){batchSize=Math.max(10,Math.floor(batchSize/2));continue;}throw new Error('Cloud save failed near product '+(i+1)+': '+message);}
-   i+=batch.length;queue.nextIndex=i;await saveSkuQueue(queue);
+   if(error){const message=String(error.message||error.details||'');if(batchSize>10&&/statement timeout|canceling statement|timeout|payload too large|request entity too large|too many rows|content too large|413/i.test(message)){batchSize=Math.max(10,Math.floor(batchSize/2));if(out)out.textContent='Adjusting upload batch size to '+batchSize+' products and retrying safely…';continue;}throw new Error('Cloud save failed near product '+(i+1)+': '+message);}
+   i+=batch.length;queue.nextIndex=i;
+   // Checkpoint every ~1,000 products rather than rewriting the entire 80k-item queue after every small batch. Re-uploading a recent batch is safe because IDs are stable and upsert is idempotent.
+   if(i%1000<batch.length||i===items.length)await saveSkuQueue(queue);
    if(out)out.textContent=`Saving to cloud: ${i.toLocaleString()} / ${items.length.toLocaleString()} products… (reload will resume)`;
    setCloudStatus(`Uploading SKU file: ${i.toLocaleString()} / ${items.length.toLocaleString()}`);
   }
   const ids=items.map(p=>String(p.id));const foundIds=new Set();
   // Keep verification requests small so long SKU uploads do not create oversized REST query URLs.
-  const verifyBatchSize=50;
+  const verifyBatchSize=100;
   for(let j=0;j<ids.length;j+=verifyBatchSize){
    const batchIds=ids.slice(j,j+verifyBatchSize);
    const {data,error}=await cloudClient.from('products').select('id').eq('owner_id',queue.ownerId).in('id',batchIds);
