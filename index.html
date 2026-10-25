@@ -1187,7 +1187,7 @@ async function restoreCloudSafely(){
   KEY='biscuitExpiryTracker.user.'+String(accountId)+'.v1';
   activeDataUserId=accountId;editingId=null;
   try{const saved=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(saved))products=saved;}catch(e){}
-  render();
+  // Keep the loading indicator visible until the complete cloud catalog is available.
  }
  const remoteRows=await fetchCloudProducts();
  // Replace the cache only after the complete fetch succeeds.
@@ -1206,11 +1206,12 @@ async function updateAuthUI(){
  cloudSession=data.session;
  if(cloudSession){
   // Sessions are intentionally memory-only: reloading/reopening the page requires email and password again.
-  switchUserStorage(cloudSession.user.id);
-  // Authentication success should unlock the app even if the products table is not ready.
+  // Show loading instead of zero stock while the full cloud catalog is fetched.
+  $('totalStock').textContent='Loading…';$('totalProducts').textContent='…';
+  $('productList').innerHTML='<div class="panel empty">Loading products and stock from cloud. Please wait…</div>';
   document.body.classList.remove('auth-locked');$('authOverlay').classList.add('hidden');$('headerLogout').classList.remove('hidden');if(!adminPanelOpen)$('adminOverlay').classList.add('hidden');adminLoggedIn=true;
   try{await restoreCloudSafely();}
-  catch(e){console.error(e);setCloudStatus('Logged in, but cloud data could not load: '+(e.message||'check products table and RLS policies')+'. Local data is preserved.');}
+  catch(e){console.error(e);switchUserStorage(cloudSession.user.id);render();setCloudStatus('Logged in, but cloud data could not load: '+(e.message||'check products table and RLS policies')+'. Local data is preserved.');}
  } else {$('authOverlay').classList.remove('hidden');document.body.classList.add('auth-locked');}
 }
 $('saveCloudConfig').onclick=()=>{
