@@ -342,7 +342,7 @@ function toast(msg){const old=document.querySelector('.toast');if(old)old.remove
 function render(){
  const count=s=>products.filter(p=>status(p)===s).length;
  $('totalProducts').textContent=products.length;
- const uploadReport=$('lastSkuUploadReport');if(uploadReport){const latest=products.reduce((best,p)=>{const t=p.lastSkuUploadAt||'';return t>best?t:best;},'');uploadReport.textContent=latest?'Last SKU file upload: '+new Date(latest).toLocaleString()+' (Saudi Arabia time)':'Last SKU file upload: No upload recorded yet.';}
+ const uploadReport=$('lastSkuUploadReport');if(uploadReport){const latest=products.reduce((best,p)=>{const t=p.lastSkuUploadAt||'';return t>best?t:best;},'');if(latest){const latestCount=products.filter(p=>p.lastSkuUploadAt===latest).length;const latestDate=new Date(latest);uploadReport.textContent='Last SKU file upload: '+new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Riyadh'}).format(latestDate)+' (Saudi Arabia time) · '+latestCount.toLocaleString()+' product(s) processed.';}else{uploadReport.textContent='Last SKU file upload: No successful upload recorded yet.';}}
  $('totalStock').textContent=products.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0),0).toLocaleString();
  $('nearCount').textContent=count('near');$('expiredCount').textContent=count('expired');$('outCount').textContent=count('out');updateSmartExpiryAlert();
  const q=$('search').value.trim().toLowerCase(),sf=$('statusFilter').value,sort=$('sortFilter').value;
@@ -566,6 +566,9 @@ $('skuImportBtn').addEventListener('click',async()=>{
    if(sku&&!bySku.has(sku.toLowerCase()))bySku.set(sku.toLowerCase(),p);if(barcode&&!byBarcode.has(barcode))byBarcode.set(barcode,p);if(!byName.has(name.toLowerCase()))byName.set(name.toLowerCase(),p);
   }
   if(!changed.length)throw new Error('No rows with any usable cell values were found in the selected file.');
+  // Store one shared timestamp on every product touched by this import so the report can identify the latest upload.
+  const skuUploadTimestamp=new Date().toISOString();
+  changed.forEach(p=>{p.lastSkuUploadAt=skuUploadTimestamp;});
   statusEl.textContent='Importing '+changed.length.toLocaleString()+' row(s) to cloud…';
   // Block background full-list sync while this import writes its batches.
   while(cloudBusy)await new Promise(resolve=>setTimeout(resolve,50));
