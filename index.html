@@ -293,6 +293,11 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <p class="notice">View all expired, near-expiry, and in-date products here. No file download is needed.</p>
 <div class="hidden" aria-hidden="true"><select id="expiryViewFilter"><option value="all" selected>All Products</option><option value="near">Near Expiry (within 30 days)</option><option value="expired">Expired</option><option value="ok">In Date</option><option value="out">Out of Stock</option></select><select id="expiryDays"><option value="7" selected>Next 7 Days</option><option value="14">Next 14 Days</option><option value="30">Next 30 Days</option></select></div>
 <div class="panel" style="margin-top:12px;padding:12px">
+<strong>🚨 Quick Expiry Alerts</strong>
+<p class="notice">Quickly show products expiring in the next 7, 12, 14, or 30 days. Use the custom date range below for any period.</p>
+<div class="filters"><label>Alert window<select id="expiryQuickDays" class="input"><option value="7">Next 7 Days</option><option value="12">Next 12 Days</option><option value="14">Next 14 Days</option><option value="30" selected>Next 30 Days</option></select></label><div style="display:flex;align-items:end"><button type="button" id="applyExpiryQuickBtn" style="width:100%">Show Alert List</button></div></div>
+</div>
+<div class="panel" style="margin-top:12px;padding:12px">
 <strong>📅 Custom Expiry Date Range</strong>
 <p class="notice">Select a start date and end date, then click Apply. You can download or print the matching list as Excel/CSV.</p>
 <div class="filters"><label>From date <input type="date" id="expiryFromDate"></label><label>To date <input type="date" id="expiryToDate"></label></div>
@@ -900,14 +905,26 @@ const authOverlayObserver=new MutationObserver(()=>{
 });
 authOverlayObserver.observe($('authOverlay'),{attributes:true,attributeFilter:['class']});
 
+function localDateISO(date=new Date()){
+ const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');
+ return y+'-'+m+'-'+d;
+}
+function getActiveExpiryRange(){
+ const from=$('expiryFromDate')?.value||'',to=$('expiryToDate')?.value||'';
+ if(from||to)return {from,to,mode:'custom'};
+ const days=Math.max(1,Number($('expiryQuickDays')?.value||30));
+ const start=new Date();start.setHours(0,0,0,0);
+ const end=new Date(start);end.setDate(end.getDate()+days);
+ return {from:localDateISO(start),to:localDateISO(end),mode:'quick',days};
+}
 function renderExpiry(){
  const panel=$('expiryPanel');panel.classList.remove('hidden');
- const from=$('expiryFromDate')?.value||'',to=$('expiryToDate')?.value||'';
+ const range=getActiveExpiryRange(),from=range.from,to=range.to;
  let list=[];
  const root=$('expiryList');root.innerHTML='';
  if(!from||!to){
-   $('expirySummary').textContent='Select both From date and To date, then click Apply Date Range to show matching products.';
-   root.innerHTML='<div class="empty">No products shown. Select a date range and click Apply Date Range.</div>';
+   $('expirySummary').textContent='Choose a quick alert window or enter both custom dates.';
+   root.innerHTML='<div class="empty">Choose an alert window or select a custom date range.</div>';
    return;
  }
  if(from>to){
@@ -917,7 +934,7 @@ function renderExpiry(){
  }
  list=products.filter(p=>Number(p.stock)>0 && !!p.expiry && p.expiry>=from && p.expiry<=to)
    .sort((a,b)=>((a.expiry||'9999').localeCompare(b.expiry||'9999')));
- $('expirySummary').textContent=`Expiry dates from ${from} to ${to}: ${list.length} products.`;
+ $('expirySummary').textContent=`${range.mode==='quick'?'Quick expiry alert (next '+range.days+' days)':'Custom expiry dates'} · ${from} to ${to}: ${list.length} products.`;
  if(!list.length){root.innerHTML='<div class="empty">No products with expiry dates in this range.</div>';return}
  list.forEach(p=>{
    const st=status(p),isExpiring=expiresWithin30Days(p),card=document.createElement('article');card.className='product'+(isExpiring?' expiring-month':'');
@@ -933,22 +950,20 @@ function renderExpiry(){
 }
 $('navExpiry').onclick=()=>{renderExpiry();openNavPage('Expiry',[$('expiryPanel')],'navExpiry')};
 function getExpiryFilteredProducts(){
- const from=$('expiryFromDate')?.value||'',to=$('expiryToDate')?.value||'';
+ const range=getActiveExpiryRange(),from=range.from,to=range.to;
  if(!from||!to||from>to)return [];
  return products.filter(p=>Number(p.stock)>0 && !!p.expiry && p.expiry>=from && p.expiry<=to)
    .sort((a,b)=>((a.expiry||'9999').localeCompare(b.expiry||'9999')));
 }
 function expiryReportTitle(){
- const mode=$('expiryViewFilter').selectedOptions[0]?.textContent||'Expiry List';
- const days=$('expiryDays').value;
- const from=$('expiryFromDate')?.value||'',to=$('expiryToDate')?.value||'';
- return from && to ? 'Expiry '+from+' to '+to : 'Expiry Date Range Not Selected';
+ const range=getActiveExpiryRange();
+ return range.mode==='quick'?'Expiry Alert · Next '+range.days+' Days':'Expiry '+range.from+' to '+range.to;
 }
 $('expiryExportBtn').onclick=()=>{
  const list=getExpiryFilteredProducts();if(!list.length){toast('Select a valid date range with matching products first.');return;}
  const rows=[['Product Name','Barcode','SKU','Stock (Packets)','Expiry Date','Status','Batch','Notes'],...list.map(p=>[p.name,p.barcode,p.sku,p.stock,p.expiry,statusLabel(status(p)),p.batch,p.notes])];
  const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
- const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='expiry-selected-'+$('expiryViewFilter').value+'-'+$('expiryDays').value+'-days.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Selected expiry list downloaded ('+list.length+' products)');
+ const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='expiry-selected-'+localDateISO()+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Selected expiry list downloaded ('+list.length+' products)');
 };
 $('expiryPrintBtn').onclick=()=>{
  const list=getExpiryFilteredProducts();if(!list.length){toast('Select a valid date range with matching products first.');return;}
@@ -958,8 +973,10 @@ $('expiryPrintBtn').onclick=()=>{
  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(expiryReportTitle())}</title><style>*{font-weight:800!important;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:20px;color:#111;position:relative}.print-brand{font-size:34px;font-weight:900!important;letter-spacing:1.2px;text-align:left;margin:0 0 16px;color:#000}h2{margin-bottom:5px}p{margin-top:0;color:#222}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1.5px solid #555;padding:6px;text-align:left}th{background:#eee}.watermark{position:fixed;z-index:0;pointer-events:none;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-32deg);font-size:clamp(38px,8vw,90px);font-weight:900!important;letter-spacing:3px;color:rgba(0,0,0,.09);white-space:nowrap;width:100%;text-align:center}.print-content{position:relative;z-index:1} @media print{button{display:none}body{padding:0}.watermark{position:fixed;color:rgba(0,0,0,.10);print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="watermark">HUNGER STATION</div><div class="print-content"><h1 class="print-brand">HUNGER STATION</h1><h2>${esc(expiryReportTitle())}</h2><p>Products: ${list.length} · Printed: ${new Date().toLocaleString()}</p><button onclick="window.print()">Print</button><table><thead><tr><th>No.</th><th>Product</th><th>Barcode</th><th>SKU</th><th>Stock</th><th>Expiry Date</th><th>Status</th><th>Batch</th></tr></thead><tbody>${rows||'<tr><td colspan="8">No products found for this selection.</td></tr>'}</tbody></table></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);w.document.close();
 };
 $('expiryViewFilter').onchange=renderExpiry;$('expiryDays').onchange=renderExpiry;
+$('expiryQuickDays').onchange=()=>{ $('expiryFromDate').value='';$('expiryToDate').value='';renderExpiry(); };
+$('applyExpiryQuickBtn').onclick=()=>{ $('expiryFromDate').value='';$('expiryToDate').value='';renderExpiry(); };
 $('applyExpiryRangeBtn').onclick=()=>{const from=$('expiryFromDate').value,to=$('expiryToDate').value;if(!from||!to){toast('Please select both From date and To date.');return}if(from>to){toast('From date cannot be after To date.');return}renderExpiry();};
-$('clearExpiryRangeBtn').onclick=()=>{$('expiryFromDate').value='';$('expiryToDate').value='';renderExpiry();};
+$('clearExpiryRangeBtn').onclick=()=>{$('expiryFromDate').value='';$('expiryToDate').value='';$('expiryQuickDays').value='30';renderExpiry();};
 $('backToProducts').onclick=()=>{closeNavPage();$('expiryPanel').classList.add('hidden')};
 
 // Product Pick List: keep selections and search state when navigating away or reopening the page.
