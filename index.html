@@ -180,8 +180,8 @@ body.light-theme #pickListSelectedResults small,
 body.light-theme #pickListResults small { color: #52677e !important; }
 body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !important; }
 @media(max-width:480px){.header-tools{gap:5px}.header-tools button{padding:8px;font-size:11px}.brand{gap:8px}.cookie{width:43px;height:43px;font-size:27px;border-radius:12px}.brand h1{font-size:15px}.brand p{font-size:10px}.header-row{align-items:flex-start}}
-/* Make the Edit Product action unmistakable on small screens. */
-.actions .btn-edit-product{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffd166,#ff9f1c)!important;color:#251600!important;border:2px solid #ffe3a3!important;font-weight:900!important;padding:10px 13px!important;min-height:42px;min-width:145px;order:-1;box-shadow:0 0 0 2px rgba(255,159,28,.2),0 4px 12px rgba(0,0,0,.2)!important}
+/* Compact Edit Product button, matching the other product actions. */
+.actions .btn-edit-product{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;background:#173d5c!important;color:#e8f4ff!important;border:1px solid #326080!important;font-weight:750!important;padding:8px 10px!important;min-height:0;min-width:0;order:-1;box-shadow:none!important}
 </style>
 </head>
 <body class="auth-locked">
@@ -362,7 +362,7 @@ function render(){
  refreshPickButton();
  pickBtn.onclick=()=>{const id=String(p.id);if(isPicked()){pickListSelected.delete(id);toast('Removed from Pick List: '+p.name)}else{pickListSelected.add(id);toast('Added to Pick List: '+p.name)}savePickListState();refreshPickButton();if(typeof renderPickList==='function'&&$('pickListResults'))renderPickList();};
  actions.append(pickBtn);
- [['✏️ EDIT PRODUCT',()=>edit(p.id),'btn-edit-product'],['＋ Add Stock',()=>changeStock(p.id,1),'btn-green'],['− Reduce Stock',()=>changeStock(p.id,-1),'btn-secondary'],['🗑 Delete',()=>removeProduct(p.id),'btn-red']].forEach(([label,fn,cls])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.className=cls;b.style.display='inline-flex';b.style.visibility='visible';b.style.opacity='1';b.onclick=fn;actions.append(b)});
+ [['✎ Edit Product',()=>edit(p.id),'btn-edit-product'],['＋ Add Stock',()=>changeStock(p.id,1),'btn-green'],['− Reduce Stock',()=>changeStock(p.id,-1),'btn-secondary'],['🗑 Delete',()=>removeProduct(p.id),'btn-red']].forEach(([label,fn,cls])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.className=cls;b.style.display='inline-flex';b.style.visibility='visible';b.style.opacity='1';b.onclick=fn;actions.append(b)});
  card.append(left,qty,actions);root.append(card);
  });
 }
