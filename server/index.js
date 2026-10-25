@@ -29,7 +29,7 @@ app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
     return callback(new Error('Origin is not allowed by CORS.'));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -131,7 +131,7 @@ app.post('/api/products/bulk', auth, async (req, res) => {
     const ownerId = String(req.user._id);
     const ops = list.map(p => {
       const clean = normalizeProduct(p, ownerId);
-      return { updateOne: { filter: { ownerId, productId: clean.productId }, update: { $set: clean, $setOnInsert: { createdAt: clean.createdAt } }, upsert: true } };
+      return { updateOne: { filter: { ownerId, productId: clean.productId }, update: { $set: clean }, upsert: true } };
     });
     const result = await products().bulkWrite(ops, { ordered: true });
     res.json({ ok: true, received: list.length, upserted: result.upsertedCount, modified: result.modifiedCount });
