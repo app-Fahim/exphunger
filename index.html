@@ -914,17 +914,26 @@ async function fetchCloudProducts(){
 let syncRequested=false;
 async function syncProducts(){
  if(!cloudClient||!cloudSession||cloudClearing)return;
- // If a change happens during a sync, schedule another pass instead of silently dropping it.
- if(cloudBusy){syncRequested=true;return;}
+ // Never return early while another sync is running: import/save callers must wait
+ // until their requested changes have actually been written before verifying cloud.
+ if(cloudBusy){
+  syncRequested=true;
+  while(cloudBusy)await new Promise(resolve=>setTimeout(resolve,50));
+  if(syncRequested&&cloudClient&&cloudSession&&!cloudClearing)return syncProducts();
+  return;
+ }
  cloudBusy=true;
  try{
   do{
    syncRequested=false;
-   const rows=products.map(p=>toCloud(p,cloudSession.user.id));
+   const accountId=cloudSession.user.id;
+   const rows=products.map(p=>toCloud(p,accountId));
    for(let i=0;i<rows.length;i+=250){const {error}=await cloudClient.from('products').upsert(rows.slice(i,i+250),{onConflict:'owner_id,id'});if(error)throw error;}
-  }while(syncRequested && cloudClient && cloudSession);
+  }while(syncRequested && cloudClient && cloudSession && !cloudClearing);
   setCloudStatus('Connected · last sync '+new Date().toLocaleTimeString());
  }finally{cloudBusy=false;}
+ // Catch a change that arrived just as the previous pass was finishing.
+ if(syncRequested&&cloudClient&&cloudSession&&!cloudClearing)return syncProducts();
 }
 async function deleteCloudProduct(id){if(!cloudClient||!cloudSession)throw new Error('Cloud login is required to delete products.');
  // Serialize deletes against an in-flight full-list upsert. Otherwise a previous sync
