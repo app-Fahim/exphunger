@@ -131,6 +131,9 @@ button{background:linear-gradient(135deg,#76f7e6,#29d9c7 55%,#11b8b1);color:#042
 @media(prefers-reduced-motion:no-preference){.panel,.stat,.product{animation:soft-rise .35s ease-out both}@keyframes soft-rise{from{opacity:.88;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}}
 
 
+.product.expired-glow{border:3px solid #ff334f!important;background:linear-gradient(120deg,rgba(255,51,79,.25),rgba(26,20,31,.98))!important;box-shadow:0 0 0 2px rgba(255,51,79,.25),0 0 18px rgba(255,51,79,.42)!important;animation:expiredPulse 1.8s ease-in-out infinite alternate}
+body.light-theme .product.expired-glow{background:linear-gradient(120deg,#ffe0e5,#fff5f6)!important;border-color:#d7193f!important;box-shadow:0 0 0 2px #ff334f33,0 0 18px #ff334f30!important}
+@keyframes expiredPulse{from{filter:saturate(1);box-shadow:0 0 0 2px rgba(255,51,79,.18),0 0 10px rgba(255,51,79,.22)}to{filter:saturate(1.25);box-shadow:0 0 0 3px rgba(255,51,79,.38),0 0 22px rgba(255,51,79,.5)}}
 /* UPCOMING EXPIRY HIGHLIGHT: high-visibility warning in both themes */
 .product.expiring-month{
   border:3px solid #ff9f1c !important;
@@ -349,7 +352,8 @@ const $=id=>document.getElementById(id);
 function load(){try{products=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(products))products=[]}catch(e){products=[]}}
 function safeCacheProducts(){try{localStorage.setItem(KEY,JSON.stringify(products));return true}catch(e){console.warn('Local cache full; cloud remains source of truth.',e);return false}}
 function persist(){const cached=safeCacheProducts();if(cloudSession&&cloudClient){syncProducts().catch(e=>{console.error(e);setCloudStatus('Cloud sync failed: '+(e.message||'check connection/table policies'));});if(!cached)setCloudStatus('Browser storage is full; changes are being saved to your Supabase cloud account.');return true;}if(!cached){toast('Browser storage is full. Log in to Supabase and sync your data, then export a backup.');return false;}return true}
-function daysTo(date){if(!date)return null;const m=String(date).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return null;const a=new Date();a.setHours(0,0,0,0);const b=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
+function expiryISO(date){if(!date)return'';const s=String(date).trim();let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m){const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);if(mo>=1&&mo<=12&&d>=1&&d<=31)return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');return'';}m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m){let a=Number(m[1]),b=Number(m[2]),y=Number(m[3]);let mo=a>12?b:a,day=a>12?a:(b>12?b:a);if(a<=12&&b<=12){day=a;mo=b;}if(mo>=1&&mo<=12&&day>=1&&day<=31)return y+'-'+String(mo).padStart(2,'0')+'-'+String(day).padStart(2,'0');}return'';}
+function daysTo(date){const iso=expiryISO(date);if(!iso)return null;const m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);const a=new Date();a.setHours(0,0,0,0);const b=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
 function expiresWithin30Days(p){const d=daysTo(p?.expiry);return d!==null&&d>=0&&d<=30}
 function status(p){if(Number(p.stock)<=0)return'out';const d=daysTo(p.expiry);if(d!==null&&d<0)return'expired';if(d!==null&&d<=30)return'near';return'ok'}
 function statusLabel(s){return({ok:'In Stock',near:'Near Expiry',expired:'Expired',out:'Out of Stock'})[s]}
@@ -434,7 +438,7 @@ function render(){
  const DISPLAY_LIMIT=500;
  if(list.length>DISPLAY_LIMIT){const note=document.createElement('div');note.className='notice';note.textContent=`Showing first ${DISPLAY_LIMIT.toLocaleString()} of ${list.length.toLocaleString()} matching products. Use Search to narrow the list.`;root.append(note);list=list.slice(0,DISPLAY_LIMIT)}
  list.forEach(p=>{const s=status(p),low=Number(p.stock)>0&&Number(p.stock)<=Number(p.minStock||0),expiresWithinMonth=expiresWithin30Days(p);
- const card=document.createElement('article');card.className='product'+(expiresWithinMonth?' expiring-month':'');
+ const card=document.createElement('article');card.className='product'+(s==='expired'?' expired-glow':expiresWithinMonth?' expiring-month':'');
  const left=document.createElement('div');const visualRow=document.createElement('div');visualRow.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap";const im=document.createElement('img');im.alt=p.name+" product image";im.loading="lazy";im.style.cssText="width:76px;height:76px;object-fit:contain;background:#fff;border-radius:12px;padding:4px;flex-shrink:0";if(p.image_url){im.src=p.image_url;im.onerror=()=>{im.style.display="none"}}else{im.src="";im.style.display="none"}visualRow.append(im);left.append(visualRow);const nm=document.createElement('div');nm.className='pname';nm.textContent=p.name;left.append(nm);
  const meta=document.createElement('div');meta.className='meta';meta.textContent=`Barcode: ${p.barcode||'—'} · SKU: ${p.sku||'—'}`;left.append(meta);
  const tags=document.createElement('div');tags.className='pills';const pill=document.createElement('span');pill.className='pill '+s; pill.textContent=statusLabel(s);tags.append(pill);
@@ -932,8 +936,8 @@ function renderExpiry(){
    root.innerHTML='<div class="empty">Please correct the date range.</div>';
    return;
  }
- list=products.filter(p=>Number(p.stock)>0 && !!p.expiry && p.expiry>=from && p.expiry<=to)
-   .sort((a,b)=>((a.expiry||'9999').localeCompare(b.expiry||'9999')));
+ list=products.filter(p=>{if(Number(p.stock)<=0)return false;const iso=expiryISO(p.expiry);if(!iso)return false;if(range.mode==='quick'){const d=daysTo(iso);return d!==null&&d<=Number(range.days||30);}return iso>=from&&iso<=to;})
+   .sort((a,b)=>expiryISO(a.expiry).localeCompare(expiryISO(b.expiry)));
  $('expirySummary').textContent=`${range.mode==='quick'?'Quick expiry alert (next '+range.days+' days)':'Custom expiry dates'} · ${from} to ${to}: ${list.length} products.`;
  if(!list.length){root.innerHTML='<div class="empty">No products with expiry dates in this range.</div>';return}
  list.forEach(p=>{
@@ -952,8 +956,8 @@ $('navExpiry').onclick=()=>{renderExpiry();openNavPage('Expiry',[$('expiryPanel'
 function getExpiryFilteredProducts(){
  const range=getActiveExpiryRange(),from=range.from,to=range.to;
  if(!from||!to||from>to)return [];
- return products.filter(p=>Number(p.stock)>0 && !!p.expiry && p.expiry>=from && p.expiry<=to)
-   .sort((a,b)=>((a.expiry||'9999').localeCompare(b.expiry||'9999')));
+ return products.filter(p=>{if(Number(p.stock)<=0)return false;const iso=expiryISO(p.expiry);if(!iso)return false;if(range.mode==='quick'){const d=daysTo(iso);return d!==null&&d<=Number(range.days||30);}return iso>=from&&iso<=to;})
+   .sort((a,b)=>expiryISO(a.expiry).localeCompare(expiryISO(b.expiry)));
 }
 function expiryReportTitle(){
  const range=getActiveExpiryRange();
