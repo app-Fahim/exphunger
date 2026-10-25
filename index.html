@@ -505,8 +505,11 @@ $('skuImportBtn').addEventListener('click',async()=>{
   }
   if(!rawRows.length)throw new Error('The selected file has no product rows.');
   const accountId=cloudSession.user.id;
-  const bySku=new Map(),byBarcode=new Map(),byName=new Map();
+  const bySku=new Map(),byBarcode=new Map(),byName=new Map(),usedExistingIds=new Set();
   products.forEach(p=>{const sku=String(p.sku||'').trim().toLowerCase(),bar=String(p.barcode||'').trim(),name=String(p.name||'').trim().toLowerCase();if(sku&&!bySku.has(sku))bySku.set(sku,p);if(bar&&!byBarcode.has(bar))byBarcode.set(bar,p);if(name&&!byName.has(name))byName.set(name,p);});
+  // Keep the original cloud records as match candidates. Repeated names in the
+  // uploaded workbook must not overwrite each other; each row gets its own record
+  // unless it has a unique SKU/barcode match, or an unused existing name match.
   const changed=[],createdIds=new Set();let skipped=0,updated=0,added=0;
   for(const row of rawRows){
    const rowKeys=Object.keys(row).filter(k=>k!=='__sourceSheet');
@@ -522,7 +525,10 @@ $('skuImportBtn').addEventListener('click',async()=>{
    const hasStock=stockRaw!==''&&stockRaw!==null&&stockRaw!==undefined&&Number.isFinite(Number(String(stockRaw).replace(/,/g,'')))&&Number(String(stockRaw).replace(/,/g,''))>=0;
    const expiry=skuDateValue(skuCell(row,['Expiry Date','Expiry','Expiration Date','Best Before','Expire Date']));
    const minRaw=skuCell(row,['Minimum Stock','Min Stock','Low Stock Alert','Reorder Level']);
-   let existing=(sku&&bySku.get(sku.toLowerCase()))||(barcode&&byBarcode.get(barcode))||byName.get(name.toLowerCase());
+   let existing=(sku&&bySku.get(sku.toLowerCase()))||(barcode&&byBarcode.get(barcode))||null;
+   if(existing&&usedExistingIds.has(String(existing.id)))existing=null;
+   if(!existing){const nameCandidate=byName.get(name.toLowerCase());if(nameCandidate&&!usedExistingIds.has(String(nameCandidate.id)))existing=nameCandidate;}
+   if(existing)usedExistingIds.add(String(existing.id));
    const stock=hasStock?Math.floor(Number(String(stockRaw).replace(/,/g,''))):(existing?Math.max(0,Number(existing.stock)||0):0);
    const minStock=minRaw!==''&&Number.isFinite(Number(minRaw))?Math.max(0,Math.floor(Number(minRaw))):(existing?Math.max(0,Number(existing.minStock)||0):5);
    const batch=String(skuCell(row,['Batch','Batch No','Lot','Lot Number'])).trim()||(existing?.batch||'');
@@ -536,7 +542,7 @@ $('skuImportBtn').addEventListener('click',async()=>{
    if(existing&&hasStock&&Number(existing.stock)!==stock)recordStockHistory(p,existing.stock,stock,'SKU file import');
    changed.push(p);
    if(existing){updated++;}else{added++;createdIds.add(String(p.id));}
-   if(sku)bySku.set(sku.toLowerCase(),p);if(barcode)byBarcode.set(barcode,p);byName.set(name.toLowerCase(),p);
+   if(sku&&!bySku.has(sku.toLowerCase()))bySku.set(sku.toLowerCase(),p);if(barcode&&!byBarcode.has(barcode))byBarcode.set(barcode,p);if(!byName.has(name.toLowerCase()))byName.set(name.toLowerCase(),p);
   }
   if(!changed.length)throw new Error('No rows with any usable cell values were found in the selected file.');
   statusEl.textContent='Importing '+changed.length.toLocaleString()+' row(s) to cloud…';
@@ -545,22 +551,49 @@ $('skuImportBtn').addEventListener('click',async()=>{
   if(!cloudSession||cloudSession.user.id!==accountId)throw new Error('Your login changed. Please log in again and retry.');
   cloudBusy=true;lockHeld=true;
   try{
-   for(let i=0;i<changed.length;i+=50){
+   const batchSize=50;
+   for(let i=0;i<changed.length;i+=batchSize){
     if(!cloudSession||cloudSession.user.id!==accountId)throw new Error('Login changed during import.');
-    const batch=changed.slice(i,i+50).map(p=>toCloud(p,accountId));
+    const chunk=changed.slice(i,i+batchSize);
+    const batch=chunk.map(p=>toCloud(p,accountId));
     const {error}=await cloudClient.from('products').upsert(batch,{onConflict:'owner_id,id'});
-    if(error)throw new Error('Cloud import failed near row '+(i+1)+': '+error.message);
-    for(const p of changed.slice(i,i+50)){
+    if(error)throw new Error('Cloud import failed near file row '+(i+1)+': '+error.message);
+    for(const p of chunk){
      const ix=products.findIndex(old=>String(old.id)===String(p.id));
      if(ix>=0)products[ix]=p;else products.push(p);
     }
-    safeCacheProducts();render();
-    statusEl.textContent='Saved '+Math.min(i+50,changed.length).toLocaleString()+' / '+changed.length.toLocaleString()+' rows…';
+    safeCacheProducts();
+    if((i+batchSize)%500===0||i+batchSize>=changed.length)render();
+    statusEl.textContent='Uploading to Supabase: '+Math.min(i+chunk.length,changed.length).toLocaleString()+' / '+changed.length.toLocaleString()+' rows saved…';
    }
+   statusEl.textContent='Upload batches finished. Verifying every imported record in cloud…';
+   // Verify against the cloud's actual records, not the browser cache. Retry missing
+   // IDs in small batches to repair transient/network-limited writes automatically.
+   let cloudRows=await fetchCloudProducts();
+   const cloudIds=new Set(cloudRows.map(row=>String(row.id)));
+   let missing=changed.filter(p=>!cloudIds.has(String(p.id)));
+   for(let attempt=1;missing.length&&attempt<=3;attempt++){
+    if(!cloudSession||cloudSession.user.id!==accountId)throw new Error('Login changed during cloud verification.');
+    statusEl.textContent='Retrying '+missing.length.toLocaleString()+' record(s) not yet visible in cloud (attempt '+attempt+'/3)…';
+    for(let i=0;i<missing.length;i+=25){
+     const {error}=await cloudClient.from('products').upsert(missing.slice(i,i+25).map(p=>toCloud(p,accountId)),{onConflict:'owner_id,id'});
+     if(error)throw new Error('Cloud verification retry failed: '+error.message);
+    }
+    cloudRows=await fetchCloudProducts();
+    const verifyIds=new Set(cloudRows.map(row=>String(row.id)));
+    missing=changed.filter(p=>!verifyIds.has(String(p.id)));
+   }
+   if(missing.length){
+    products=cloudRows.map(row=>fromCloud(row));safeCacheProducts();render();
+    throw new Error('Cloud verification still cannot find '+missing.length.toLocaleString()+' of '+changed.length.toLocaleString()+' imported records after retries. Keep this page open and check internet/Supabase quota; already saved cloud rows were preserved.');
+   }
+   // Cloud verification passed: reload the canonical cloud copy so the page reflects
+   // exactly what is available to other devices after login.
+   products=cloudRows.map(row=>fromCloud(row));safeCacheProducts();render();
   }finally{cloudBusy=false;lockHeld=false;}
-  setCloudStatus('Connected · SKU file import saved to Supabase.');
-  statusEl.textContent='Import complete: '+added.toLocaleString()+' added, '+updated.toLocaleString()+' updated, '+skipped.toLocaleString()+' completely empty row(s) skipped. All worksheets processed; extra columns saved in product Notes.';
-  toast('SKU file imported and saved to cloud.');
+  setCloudStatus('Connected · all '+changed.length.toLocaleString()+' imported records verified in Supabase.');
+  statusEl.textContent='Import verified successfully: '+added.toLocaleString()+' added, '+updated.toLocaleString()+' updated, '+skipped.toLocaleString()+' empty row(s) skipped. All worksheets processed; extra columns are saved in Notes.';
+  toast('All imported records verified in cloud.');
  }catch(err){console.error(err);statusEl.textContent='Import stopped: '+(err.message||'Please check the file and cloud connection')+'. Any batches already saved remain in cloud.';setCloudStatus('SKU import failed: '+(err.message||'check file and cloud connection'));}
  finally{if(lockHeld){cloudBusy=false;}btn.disabled=false;}
 });
