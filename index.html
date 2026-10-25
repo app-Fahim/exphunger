@@ -230,7 +230,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <div class="stats" id="statsRoot">
 <div class="stat s-blue"><div class="label">📦 Total Products</div><strong id="totalProducts">0</strong><small>Different product types</small></div>
 <div class="stat s-green"><div class="label">🟢 Total Stock</div><strong id="totalStock">0</strong><small>Packets / Pieces</small></div>
-<div class="stat s-amber"><div class="label">⚠️ Near Expiry</div><strong id="nearCount">0</strong><small>Within the next 7 days</small></div>
+<div class="stat s-amber"><div class="label">⚠️ Near Expiry</div><strong id="nearCount">0</strong><small>Within the next 30 days</small></div>
 <div class="stat s-red"><div class="label">🚨 Expired</div><strong id="expiredCount">0</strong><small>Expired</small></div>
 <div class="stat s-slate"><div class="label">✖ Out of Stock</div><strong id="outCount">0</strong><small>Zero stock</small></div>
 </div>
@@ -249,10 +249,10 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 </div>
 
 <div class="panel home-only-hidden" id="formPanel">
-<h2 id="formTitle">➕ Add New Biscuit</h2>
+<h2 id="formTitle">➕ Add New Product</h2>
 <form id="productForm">
 <div class="formgrid">
-<div class="field full"><label for="name">Product Name *</label><input class="input" id="name" required placeholder="e.g. Oreo Biscuit"></div>
+<div class="field full"><label for="name">Product Name *</label><input class="input" id="name" required placeholder="e.g. Milk, Juice, Rice, or Biscuits"></div>
 <div class="field"><label for="barcode">Barcode (Optional)</label><input class="input" id="barcode" inputmode="numeric" placeholder="Barcode number"></div>
 <div class="field"><label for="sku">SKU / Item Code (Optional)</label><input class="input" id="sku" placeholder="SKU or item code"></div>
 <div class="field"><label for="stock">Current Stock (Packets) *</label><input class="input" id="stock" type="number" min="0" step="1" required value="0"></div>
@@ -269,7 +269,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <div class="panel hidden home-only-hidden" id="expiryPanel">
 <h2>🗓️ Expiry Monitor — Expiry List</h2>
 <p class="notice">View all expired, near-expiry, and in-date products here. No file download is needed.</p>
-<div class="hidden" aria-hidden="true"><select id="expiryViewFilter"><option value="all" selected>All Products</option><option value="near">Near Expiry (within 7 days)</option><option value="expired">Expired</option><option value="ok">In Date</option><option value="out">Out of Stock</option></select><select id="expiryDays"><option value="7" selected>Next 7 Days</option><option value="14">Next 14 Days</option><option value="30">Next 30 Days</option></select></div>
+<div class="hidden" aria-hidden="true"><select id="expiryViewFilter"><option value="all" selected>All Products</option><option value="near">Near Expiry (within 30 days)</option><option value="expired">Expired</option><option value="ok">In Date</option><option value="out">Out of Stock</option></select><select id="expiryDays"><option value="7" selected>Next 7 Days</option><option value="14">Next 14 Days</option><option value="30">Next 30 Days</option></select></div>
 <div class="panel" style="margin-top:12px;padding:12px">
 <strong>📅 Custom Expiry Date Range</strong>
 <p class="notice">Select a start date and end date, then click Apply. You can download or print the matching list as Excel/CSV.</p>
@@ -324,7 +324,7 @@ function safeCacheProducts(){try{localStorage.setItem(KEY,JSON.stringify(product
 function persist(){const cached=safeCacheProducts();if(cloudSession&&cloudClient){syncProducts().catch(e=>{console.error(e);setCloudStatus('Cloud sync failed: '+(e.message||'check connection/table policies'));});if(!cached)setCloudStatus('Browser storage is full; changes are being saved to your Supabase cloud account.');return true;}if(!cached){toast('Browser storage is full. Log in to Supabase and sync your data, then export a backup.');return false;}return true}
 function daysTo(date){if(!date)return null;const m=String(date).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return null;const a=new Date();a.setHours(0,0,0,0);const b=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
 function expiresWithin30Days(p){const d=daysTo(p?.expiry);return d!==null&&d>=0&&d<=30}
-function status(p){if(Number(p.stock)<=0)return'out';const d=daysTo(p.expiry);if(d!==null&&d<0)return'expired';if(d!==null&&d<=7)return'near';return'ok'}
+function status(p){if(Number(p.stock)<=0)return'out';const d=daysTo(p.expiry);if(d!==null&&d<0)return'expired';if(d!==null&&d<=30)return'near';return'ok'}
 function statusLabel(s){return({ok:'In Stock',near:'Near Expiry',expired:'Expired',out:'Out of Stock'})[s]}
 function dateLabel(p){if(!p.expiry)return'Date not set';const d=daysTo(p.expiry);if(d<0)return`${p.expiry} · ${Math.abs(d)} days past expiry`;if(d===0)return`${p.expiry} · expires today`;return`${p.expiry} · ${d} days remaining`}
 function toast(msg){const old=document.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)}
@@ -397,7 +397,7 @@ $('detailBack').addEventListener('click',closeStatDetail);
  const card=$(id)?.closest('.stat');if(card){card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-label','Open '+kind+' details');card.addEventListener('click',()=>openStatDetail(kind));card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStatDetail(kind)}})}
 });
 
-function resetForm(){editingId=null;$('productForm').reset();$('stock').value=0;$('minStock').value=5;$('formTitle').textContent='➕ Add New Biscuit';$('saveBtn').textContent='Save Product';$('cancelEdit').classList.add('hidden')}
+function resetForm(){editingId=null;$('productForm').reset();$('stock').value=0;$('minStock').value=5;$('formTitle').textContent='➕ Add New Product';$('saveBtn').textContent='Save Product';$('cancelEdit').classList.add('hidden')}
 function edit(id){const p=products.find(x=>x.id===id);if(!p)return;openNavPage('Add Item',[$('formPanel')],'navAdd');editingId=id;['name','barcode','sku','stock','minStock','expiry','batch','notes'].forEach(k=>$(k).value=p[k]??(k==='stock'||k==='minStock'?0:''));$('formTitle').textContent='✎ Edit Product Details';$('saveBtn').textContent='Save Changes';$('cancelEdit').classList.remove('hidden');$('navPage').scrollTop=0;setTimeout(()=>{$('name').focus();$('formPanel').scrollIntoView({behavior:'smooth',block:'start'})},50)}
 function runBarcodeScan(){
  const code=$('scanInput').value.trim(); if(!code){toast('Scan a barcode first');$('scanInput').focus();return}
