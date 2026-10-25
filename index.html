@@ -1185,6 +1185,20 @@ updateAuthUI().catch(e=>{console.error(e);setCloudStatus('Could not initialize c
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudClient&&cloudSession){restoreCloudSafely().catch(e=>{console.error(e);setCloudStatus('Cloud refresh failed; local data is preserved.');});}});
 
 
+// Make Enter work consistently for search, login, date filters, scanner, and product forms.
+document.addEventListener('keydown',e=>{
+ if(e.key!=='Enter'||e.isComposing)return;
+ const el=e.target;
+ if(!(el instanceof HTMLInputElement)||el.type==='file'||el.type==='checkbox'||el.type==='radio'||el.type==='button'||el.type==='submit')return;
+ if(el.id==='search'||el.id==='scanInput')return; // These already have dedicated Enter handlers.
+ if(el.id==='cloudEmail'||el.id==='cloudPassword'){e.preventDefault();$('cloudLogin').click();return;}
+ if(el.id==='expiryFromDate'||el.id==='expiryToDate'){e.preventDefault();$('applyExpiryRangeBtn').click();return;}
+ const form=el.closest('form');
+ if(form){e.preventDefault();if(typeof form.requestSubmit==='function')form.requestSubmit();else form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return;}
+ const panel=el.closest('.panel');
+ if(panel&&panel.id==='findPanel'){e.preventDefault();runHomeProductSearch();return;}
+});
+
 // Theme preference is stored on this device and does not affect cloud data.
 (function(){
  const body=document.body, btn=document.getElementById('themeToggle'), meta=document.getElementById('appThemeColor');
