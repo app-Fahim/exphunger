@@ -893,8 +893,17 @@ function initCloudClient(){
  if(!window.supabase||!window.supabase.createClient){setCloudStatus('Supabase library could not load. Connect to the internet and reopen this file.');return false}
  try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'all-items-stock-expiry-auth-v1'}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
 }
-function toCloud(p,owner){return {id:String(p.id),owner_id:owner,name:String(p.name||''),image_url:String(p.image_url||''),barcode:String(p.barcode||''),sku:String(p.sku||''),stock:Math.max(0,Number(p.stock)||0),min_stock:Math.max(0,Number(p.minStock)||0),expiry:p.expiry||null,batch:String(p.batch||''),notes:String(p.notes||''),updated_at:new Date().toISOString()}}
-function fromCloud(r){return {id:String(r.id),name:r.name||'',image_url:r.image_url||'',barcode:r.barcode||'',sku:r.sku||'',stock:Number(r.stock)||0,minStock:Number(r.min_stock)||0,expiry:r.expiry||'',batch:r.batch||'',notes:r.notes||'',createdAt:r.created_at||r.updated_at||new Date().toISOString()}}
+function toCloud(p,owner){
+ const cleanNotes=String(p.notes||'').replace(/\\n?\\[\\[EXPHUNGER_FILE_STOCK=-?\\d+(?:\\.\\d+)?\\]\\]/g,'').trim();
+ const marker=Number(p.lastFileStockValue)<0?'[[EXPHUNGER_FILE_STOCK='+Number(p.lastFileStockValue)+']]':'';
+ return {id:String(p.id),owner_id:owner,name:String(p.name||''),image_url:String(p.image_url||''),barcode:String(p.barcode||''),sku:String(p.sku||''),stock:Math.max(0,Number(p.stock)||0),min_stock:Math.max(0,Number(p.minStock)||0),expiry:p.expiry||null,batch:String(p.batch||''),notes:[cleanNotes,marker].filter(Boolean).join('\\n'),updated_at:new Date().toISOString()}
+}
+function fromCloud(r){
+ const rawNotes=String(r.notes||'');
+ const match=rawNotes.match(/\\[\\[EXPHUNGER_FILE_STOCK=(-?\\d+(?:\\.\\d+)?)\\]\\]/);
+ const notes=rawNotes.replace(/\\n?\\[\\[EXPHUNGER_FILE_STOCK=-?\\d+(?:\\.\\d+)?\\]\\]/g,'').trim();
+ return {id:String(r.id),name:r.name||'',image_url:r.image_url||'',barcode:r.barcode||'',sku:r.sku||'',stock:Number(r.stock)||0,minStock:Number(r.min_stock)||0,expiry:r.expiry||'',batch:r.batch||'',notes,createdAt:r.created_at||r.updated_at||new Date().toISOString(),lastFileStockValue:match?Number(match[1]):null}
+}
 async function fetchCloudProducts(){
  if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
  // Supabase/PostgREST normally returns only a limited page (often 1,000 rows); fetch all pages.
