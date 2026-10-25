@@ -1273,7 +1273,10 @@ async function restoreCloudSafely(){
  // Supabase is the source of truth after login. Never upload stale local-cache rows
  // automatically: a product deleted in the cloud could otherwise be recreated on refresh.
  if(!cloudClient||!cloudSession)throw Error('Please log in to cloud first.');
- if(cloudBusy)return;
+ // Do not silently abandon a refresh while an import, save, or delete owns the cloud lock.
+ // Wait for that write to finish, then fetch the authoritative rows from Supabase.
+ while(cloudBusy){await new Promise(resolve=>setTimeout(resolve,50));}
+ if(!cloudClient||!cloudSession)throw Error('Cloud login ended before refresh could start.');
  const accountId=cloudSession.user.id;
  // Keep this user's cached catalog visible while the cloud request is in progress.
  // Avoid switching through guest/empty storage and briefly showing zero stock.
