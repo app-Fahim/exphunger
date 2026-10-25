@@ -540,7 +540,14 @@ $('skuFile').onchange=async e=>{
   const nameI=pickColumn(headers,['productname','product','itemname','item','name','description','materialdescription','productdescription','','','']);
   const barcodeI=pickColumn(headers,['barcode','barcodeno','barcodenumber','ean','upc','gtin','ean13','','']);
   const skuI=pickColumn(headers,['sku','skucode','itemcode','productcode','materialcode','article','itemnumber','stockkeepingunit','itemid','productid','code','','','']);
-  const stockI=pickColumn(headers,['stock','stockqty','stockquantity','stocklevel','stockpackets','stockpieces','currentstock','currentquantity','quantity','qty','onhand','quantityonhand','inventory','availablequantity','availableqty','packets','pieces','units','balance','closingstock','openingstock','','','','','','','']);
+  let stockI=pickColumn(headers,['stock','stockqty','stockquantity','stocklevel','stockpackets','stockpieces','currentstock','currentquantity','quantity','qty','onhand','quantityonhand','inventory','availablequantity','availableqty','packets','pieces','units','balance','closingstock','openingstock','available','stockonhand','physicalstock','systemstock','totalstock','stockinhand','closingqty','openingqty','closingquantity','openingquantity','স্টক','পরিমাণ','পরিমান','মজুদ']);
+  // Automatically recognize less-standard stock column names (English or Bangla),
+  // while excluding minimum/reorder/alert columns.
+  if(stockI<0)stockI=headers.findIndex(h=>{
+   const k=normHead(h);
+   if(/min|minimum|reorder|alert|threshold|safety|প্রয়োজনীয়|সর্বনিম্ন/.test(k))return false;
+   return /(stock|quantity|qty|onhand|inventory|balance|packet|piece|units|available|closing|opening|স্টক|পরিমাণ|পরিমান|মজুদ)/i.test(k);
+  });
   const minI=pickColumn(headers,['minstock','minimumstock','reorderlevel','lowstockalert','']);
   const expiryI=pickColumn(headers,['expiry','expirydate','expirationdate','bestbefore','bestbeforedate','','','']);
   const batchI=pickColumn(headers,['batch','batchno','lot','lotnumber','batchnumber']);
@@ -581,7 +588,7 @@ $('skuFile').onchange=async e=>{
    if(!existing && name){const named=nameMap.get(normalizeProductName(name));if(named && ((!barcode&&!sku)||(!named.barcode&&!named.sku)))existing=named;}
    if(existing){
     existing.name=name||existing.name;existing.barcode=barcode||existing.barcode||'';existing.sku=sku||existing.sku||'';
-    if(stockRaw!==''&&Number.isFinite(stockNum)){if(stockNum<0){existing.stock=0;existing.lastFileStockValue=stockNum;}else{existing.stock=(Number(existing.stock)||0)+stock;existing.lastFileStockValue=null;}}if(minRaw!=='')existing.minStock=minStock;if(expiry)existing.expiry=expiry;if(batch)existing.batch=batch;if(notes)existing.notes=notes;
+    if(stockRaw!==''&&Number.isFinite(stockNum)){if(stockNum<0){existing.stock=0;existing.lastFileStockValue=stockNum;}else{const currentStock=Number(existing.stock)||0;existing.stock=currentStock===0?stock:currentStock+stock;existing.lastFileStockValue=null;}}if(minRaw!=='')existing.minStock=minStock;if(expiry)existing.expiry=expiry;if(batch)existing.batch=batch;if(notes)existing.notes=notes;
     if(existing.barcode)identityMap.set('b:'+String(existing.barcode).trim().replace(/\s+/g,''),existing);
     if(existing.sku)identityMap.set('s:'+String(existing.sku).trim().toLowerCase().replace(/\s+/g,''),existing);
     const nk=normalizeProductName(existing.name);if(nk&&!nameMap.has(nk))nameMap.set(nk,existing);
