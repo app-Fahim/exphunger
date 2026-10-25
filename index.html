@@ -265,6 +265,13 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 </div>
 <div class="form-actions"><button type="submit" id="saveBtn">Save Product</button><button type="button" class="btn-secondary hidden" id="cancelEdit">Cancel</button></div>
 </form>
+<div class="panel" id="skuImportPanel" style="margin-top:14px">
+ <h3>📄 Upload SKU File</h3>
+ <p class="notice">Upload an Excel (.xlsx, .xls) or CSV file to add/update products. Product Name is required; SKU/Item Code is recommended. Barcode and Stock are optional. If Stock is missing, existing stock will be kept.</p>
+ <div class="field"><label for="skuImportFile">Choose SKU / product file</label><input class="input" id="skuImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></div>
+ <div class="form-actions" style="margin-top:10px"><button type="button" id="skuImportBtn">Upload & Import SKU File</button><button type="button" class="btn-secondary" id="skuImportClearBtn">Clear File</button></div>
+ <div class="notice" id="skuImportStatus" style="margin-top:10px">No file selected.</div>
+</div>
 <p class="notice">Data is saved locally first and synced to Supabase when connected. Use the same Supabase account on every device.</p>
 </div>
 
@@ -461,6 +468,89 @@ $('stopCameraScanBtn')?.addEventListener('click',stopBarcodeCamera);
 $('cameraScanBtn')?.addEventListener('click',async()=>{if(!('BarcodeDetector' in window)){toast('Camera barcode scanning is not supported in this browser. Use your device scanner or type the barcode.');return}try{const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']});barcodeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const video=$('barcodeCamera');video.srcObject=barcodeStream;video.classList.remove('hidden');$('stopCameraScanBtn').classList.remove('hidden');$('cameraScanBtn').classList.add('hidden');await video.play();const scanFrame=async()=>{if(!barcodeStream)return;try{const codes=await detector.detect(video);if(codes.length&&codes[0].rawValue){$('scanInput').value=codes[0].rawValue;await stopBarcodeCamera();runBarcodeScan();return}}catch(e){}barcodeScanFrame=requestAnimationFrame(scanFrame)};scanFrame()}catch(err){await stopBarcodeCamera();toast('Could not open camera. Allow camera permission and try again.')}});
 $('scanInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBarcodeScan()}});
 $('navScan')?.addEventListener('click',()=>{$('scannerPanel').scrollIntoView({behavior:'smooth'});$('scanInput').focus()});
+
+
+function skuHeaderKey(value){
+ return String(value??'').trim().toLowerCase().replace(/[\\s_\\-./()]+/g,'').replace(/[^a-z0-9]/g,'');
+}
+function skuCell(row,aliases){
+ const keys=Object.keys(row||{});
+ for(const alias of aliases){const wanted=skuHeaderKey(alias);const found=keys.find(k=>skuHeaderKey(k)===wanted);if(found!==undefined&&row[found]!==undefined&&row[found]!==null&&String(row[found]).trim()!=='')return row[found];}
+ return '';
+}
+function skuDateValue(value){
+ if(value===null||value===undefined||value==='')return '';
+ if(value instanceof Date&&!isNaN(value))return value.toISOString().slice(0,10);
+ if(typeof value==='number'&&window.XLSX&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(value);if(d&&d.y&&d.m&&d.d)return String(d.y).padStart(4,'0')+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');}
+ const text=String(value).trim();if(/^\\d{4}-\\d{1,2}-\\d{1,2}/.test(text)){const m=text.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})/);return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');}
+ const m=text.match(/^(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})$/);if(m){let y=Number(m[3]);if(y<100)y+=2000;let a=Number(m[1]),b=Number(m[2]);if(a>12)return y+'-'+String(b).padStart(2,'0')+'-'+String(a).padStart(2,'0');return y+'-'+String(a).padStart(2,'0')+'-'+String(b).padStart(2,'0');}
+ const parsed=new Date(text);return !isNaN(parsed)?parsed.toISOString().slice(0,10):'';
+}
+$('skuImportBtn').addEventListener('click',async()=>{
+ const file=$('skuImportFile').files[0],statusEl=$('skuImportStatus'),btn=$('skuImportBtn');
+ if(!file){statusEl.textContent='Please choose an Excel or CSV file first.';return;}
+ if(!window.XLSX){statusEl.textContent='Excel/CSV library did not load. Check internet and reload the page.';return;}
+ if(!cloudClient||!cloudSession){statusEl.textContent='Please log in to your Supabase account before importing, so products can be saved to your cloud.';return;}
+ btn.disabled=true;statusEl.textContent='Reading file…';
+ let lockHeld=false;
+ try{
+  const buffer=await file.arrayBuffer();
+  const workbook=XLSX.read(buffer,{type:'array',cellDates:true});
+  const sheet=workbook.Sheets[workbook.SheetNames[0]];
+  const rawRows=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true});
+  if(!rawRows.length)throw new Error('The selected file has no product rows.');
+  const accountId=cloudSession.user.id;
+  const bySku=new Map(),byBarcode=new Map(),byName=new Map();
+  products.forEach(p=>{const sku=String(p.sku||'').trim().toLowerCase(),bar=String(p.barcode||'').trim(),name=String(p.name||'').trim().toLowerCase();if(sku&&!bySku.has(sku))bySku.set(sku,p);if(bar&&!byBarcode.has(bar))byBarcode.set(bar,p);if(name&&!byName.has(name))byName.set(name,p);});
+  const changed=[],createdIds=new Set();let skipped=0,updated=0,added=0;
+  for(const row of rawRows){
+   const name=String(skuCell(row,['Product Name','Product','Item Name','Description','Name','สินค้า','اسم المنتج'])).trim();
+   if(!name){skipped++;continue;}
+   const sku=String(skuCell(row,['SKU','SKU Code','Item Code','Item No','Item Number','Product Code','Code'])).trim();
+   const barcode=String(skuCell(row,['Barcode','Bar Code','EAN','UPC','GTIN'])).trim();
+   const stockRaw=skuCell(row,['Stock','Current Stock','Qty','Quantity','On Hand','Available Stock','Balance','Stock (Packets)']);
+   const hasStock=stockRaw!==''&&stockRaw!==null&&stockRaw!==undefined&&Number.isFinite(Number(String(stockRaw).replace(/,/g,'')))&&Number(String(stockRaw).replace(/,/g,''))>=0;
+   const expiry=skuDateValue(skuCell(row,['Expiry Date','Expiry','Expiration Date','Best Before','Expire Date']));
+   const minRaw=skuCell(row,['Minimum Stock','Min Stock','Low Stock Alert','Reorder Level']);
+   let existing=(sku&&bySku.get(sku.toLowerCase()))||(barcode&&byBarcode.get(barcode))||byName.get(name.toLowerCase());
+   const stock=hasStock?Math.floor(Number(String(stockRaw).replace(/,/g,''))):(existing?Math.max(0,Number(existing.stock)||0):0);
+   const minStock=minRaw!==''&&Number.isFinite(Number(minRaw))?Math.max(0,Math.floor(Number(minRaw))):(existing?Math.max(0,Number(existing.minStock)||0):5);
+   const batch=String(skuCell(row,['Batch','Batch No','Lot','Lot Number'])).trim()||(existing?.batch||'');
+   const notes=String(skuCell(row,['Notes','Remarks','Location','Shelf'])).trim()||(existing?.notes||'');
+   const p=existing?{...existing,name,sku:sku||existing.sku||'',barcode:barcode||existing.barcode||'',stock,minStock,expiry:expiry||existing.expiry||'',batch,notes}:{id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)),name,image_url:'',barcode,sku,stock,minStock,expiry,batch,notes,createdAt:new Date().toISOString(),stockHistory:[]};
+   if(existing&&hasStock&&Number(existing.stock)!==stock)recordStockHistory(p,existing.stock,stock,'SKU file import');
+   changed.push(p);
+   if(existing){updated++;}else{added++;createdIds.add(String(p.id));}
+   if(sku)bySku.set(sku.toLowerCase(),p);if(barcode)byBarcode.set(barcode,p);byName.set(name.toLowerCase(),p);
+  }
+  if(!changed.length)throw new Error('No valid products found. Make sure the file has a Product Name column.');
+  statusEl.textContent='Importing '+changed.length.toLocaleString()+' row(s) to cloud…';
+  // Block background full-list sync while this import writes its batches.
+  while(cloudBusy)await new Promise(resolve=>setTimeout(resolve,50));
+  if(!cloudSession||cloudSession.user.id!==accountId)throw new Error('Your login changed. Please log in again and retry.');
+  cloudBusy=true;lockHeld=true;
+  try{
+   for(let i=0;i<changed.length;i+=50){
+    if(!cloudSession||cloudSession.user.id!==accountId)throw new Error('Login changed during import.');
+    const batch=changed.slice(i,i+50).map(p=>toCloud(p,accountId));
+    const {error}=await cloudClient.from('products').upsert(batch,{onConflict:'owner_id,id'});
+    if(error)throw new Error('Cloud import failed near row '+(i+1)+': '+error.message);
+    for(const p of changed.slice(i,i+50)){
+     const ix=products.findIndex(old=>String(old.id)===String(p.id));
+     if(ix>=0)products[ix]=p;else products.push(p);
+    }
+    safeCacheProducts();render();
+    statusEl.textContent='Saved '+Math.min(i+50,changed.length).toLocaleString()+' / '+changed.length.toLocaleString()+' rows…';
+   }
+  }finally{cloudBusy=false;lockHeld=false;}
+  setCloudStatus('Connected · SKU file import saved to Supabase.');
+  statusEl.textContent='Import complete: '+added.toLocaleString()+' added, '+updated.toLocaleString()+' updated, '+skipped.toLocaleString()+' row(s) skipped.';
+  toast('SKU file imported and saved to cloud.');
+ }catch(err){console.error(err);statusEl.textContent='Import stopped: '+(err.message||'Please check the file and cloud connection')+'. Any batches already saved remain in cloud.';setCloudStatus('SKU import failed: '+(err.message||'check file and cloud connection'));}
+ finally{if(lockHeld){cloudBusy=false;}btn.disabled=false;}
+});
+$('skuImportClearBtn').addEventListener('click',()=>{$('skuImportFile').value='';$('skuImportStatus').textContent='No file selected.';});
+$('skuImportFile').addEventListener('change',()=>{$('skuImportStatus').textContent=$('skuImportFile').files[0]?'Selected: '+$('skuImportFile').files[0].name:'No file selected.';});
 
 $('productForm').addEventListener('submit',async e=>{
  e.preventDefault();
