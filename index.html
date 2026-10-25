@@ -387,6 +387,12 @@ function renderDashboardInsights(){
  if(!duplicates.length)dupRoot.innerHTML='<div class="empty">No possible duplicates detected from barcode, SKU, or exact product name.</div>';
  else duplicates.slice(0,12).forEach(group=>{const row=document.createElement('article');row.className='product';const title=document.createElement('div');title.className='pname';title.textContent=group.items[0].name+' · '+group.items.length+' records';const meta=document.createElement('div');meta.className='meta';meta.textContent=group.key.startsWith('barcode:')?'Matching barcode: '+group.key.slice(8):group.key.startsWith('sku:')?'Matching SKU: '+group.key.slice(4):'Matching product name (no barcode/SKU): '+group.key.slice(5);row.append(title,meta);dupRoot.append(row)});
 }
+function cleanProductNotes(value){
+ const s=String(value||'');
+ return s.replace(/(?:^|\\s*[|·]\\s*)Imported file data(?:\\s*[-—:]\\s*|\\s*)[\\s\\S]*$/i,'')
+         .replace(/(?:^|\\s*[|·]\\s*)Source sheet\\s*:\s*sheet\\d+\\s*$/i,'')
+         .trim();
+}
 function render(){
  const count=s=>products.filter(p=>status(p)===s).length;
  $('totalProducts').textContent=products.length;
@@ -394,7 +400,7 @@ function render(){
  $('totalStock').textContent=products.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0),0).toLocaleString();
  $('nearCount').textContent=count('near');$('expiredCount').textContent=count('expired');$('outCount').textContent=count('out');updateSmartExpiryAlert();renderDashboardInsights();
  const q=$('search').value.trim().toLowerCase(),sf=$('statusFilter').value,sort=$('sortFilter').value;
- let list=products.filter(p=>[p.name,p.barcode,p.sku,p.batch,p.notes].join(' ').toLowerCase().includes(q)).filter(p=>sf==='all'||status(p)===sf);
+ let list=products.filter(p=>[p.name,p.barcode,p.sku,p.batch,cleanProductNotes(p.notes)].join(' ').toLowerCase().includes(q)).filter(p=>sf==='all'||status(p)===sf);
  list.sort((a,b)=>sort==='stock'?(Number(b.stock)-Number(a.stock)):sort==='expiry'?((a.expiry||'9999').localeCompare(b.expiry||'9999')):a.name.localeCompare(b.name));
  $('listCount').textContent=`(${list.length})`;
  const root=$('productList');root.innerHTML='';
@@ -410,7 +416,7 @@ function render(){
  if(low){const lp=document.createElement('span');lp.className='pill near';lp.textContent='Low Stock';tags.append(lp)}
  if(expiresWithinMonth){const mp=document.createElement('span');mp.className='pill expiring-month-pill';mp.textContent='⚠ Expires within 30 days';tags.append(mp)}
  const exp=document.createElement('div');exp.className='meta'+(expiresWithinMonth?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(tags,exp);
- if(p.batch||p.notes){const nt=document.createElement('div');nt.className='meta';nt.textContent=[p.batch?'Batch: '+p.batch:'',p.notes].filter(Boolean).join(' · ');left.append(nt)}
+ if(p.batch||p.notes){const nt=document.createElement('div');nt.className='meta';nt.textContent=[p.batch?'Batch: '+p.batch:'',cleanProductNotes(p.notes)].filter(Boolean).join(' · ');left.append(nt)}
  const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);const history=Array.isArray(p.stockHistory)?p.stockHistory:[];const lastChange=history.length?history[history.length-1]:null;if(lastChange){const before=Number(lastChange.before)||0,after=Number(lastChange.after)||0,delta=after-before;if(delta!==0){const adj=document.createElement('small');adj.textContent=(delta>0?'+':'−')+Math.abs(delta).toLocaleString();adj.title=delta>0?'Stock added':'Stock removed';adj.style.cssText='display:block;font-size:11px;font-weight:700;color:'+(delta>0?'#16a34a':'#f59e0b')+';margin-top:3px;white-space:nowrap';qty.append(adj);}}const actions=document.createElement('div');actions.className='actions';
  // One-tap product selection from Products list adds/removes it from the persistent Pick List.
  const pickBtn=document.createElement('button');
@@ -606,7 +612,7 @@ $('skuImportBtn').addEventListener('click',async()=>{
    const standardHeaders=new Set(['product name','product','item name','item description','description','name','product title','item','สินค้า','اسم المنتج','sku','sku code','item code','item no','item number','product code','code','plu','barcode','bar code','ean','upc','gtin','stock','current stock','qty','quantity','on hand','available stock','balance','stock (packets)','expiry date','expiry','expiration date','best before','expire date','minimum stock','min stock','low stock alert','reorder level','batch','batch no','lot','lot number','notes','remarks','location','shelf']);
    // Keep only user-entered notes; do not add spreadsheet source/sheet metadata to product records.
    const rawNotes=String(existing?.notes||skuCell(row,['Notes','Remarks','Location','Shelf'])||'').trim();
-   const notes=rawNotes.replace(/\s*\|?\s*Imported file data\s*[—-].*$/i,'').trim();
+   const notes=cleanProductNotes(rawNotes);
    const p=existing?{...existing,name,sku:sku||existing.sku||'',barcode:barcode||existing.barcode||'',stock,minStock,expiry:expiry||existing.expiry||'',batch,notes}:{id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)),name,image_url:'',barcode,sku,stock,minStock,expiry,batch,notes,createdAt:new Date().toISOString(),stockHistory:[]};
    if(existing&&hasStock&&Number(existing.stock)!==stock)recordStockHistory(p,existing.stock,stock,'SKU file import · '+(importedQty>0?'added +'+importedQty:importedQty<0?'reduced '+importedQty:'reset to 0'));
    changed.push(p);
@@ -1109,7 +1115,7 @@ function initCloudClient(){
  try{cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'all-items-stock-expiry-auth-v1'}});$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;updateConnectionSettingsUI();return true}catch(e){cloudClient=null;setCloudStatus('Invalid Supabase URL/key. Please check the connection settings.');return false}
 }
 function toCloud(p,owner){
- const cleanNotes=String(p.notes||'').replace(/\n?\[\[EXPHUNGER_FILE_STOCK=[+-]?\d+(?:\.\d+)?\]\]/g,'').replace(/\n?\[\[EXPHUNGER_LAST_SKU_UPLOAD=[^\]]+\]\]/g,'').replace(/\n?\[\[EXPHUNGER_STOCK_HISTORY=[^\]]+\]\]/g,'').trim();
+ const cleanNotes=cleanProductNotes(p.notes).replace(/\n?\[\[EXPHUNGER_FILE_STOCK=[+-]?\d+(?:\.\d+)?\]\]/g,'').replace(/\n?\[\[EXPHUNGER_LAST_SKU_UPLOAD=[^\]]+\]\]/g,'').replace(/\n?\[\[EXPHUNGER_STOCK_HISTORY=[^\]]+\]\]/g,'').trim();
  const marker=Number.isFinite(Number(p.lastFileStockValue))&&Number(p.lastFileStockValue)!==0?'[[EXPHUNGER_FILE_STOCK='+(Number(p.lastFileStockValue)>0?'+':'')+Number(p.lastFileStockValue)+']]':'';
  const uploadMarker=p.lastSkuUploadAt?'[[EXPHUNGER_LAST_SKU_UPLOAD='+p.lastSkuUploadAt+']]':'';
  const historyMarker=Array.isArray(p.stockHistory)&&p.stockHistory.length?'[[EXPHUNGER_STOCK_HISTORY='+encodeURIComponent(JSON.stringify(p.stockHistory.slice(-20)))+']]':'';
@@ -1120,7 +1126,7 @@ function fromCloud(r){
  const match=rawNotes.match(/\[\[EXPHUNGER_FILE_STOCK=([+-]?\d+(?:\.\d+)?)\]\]/);
  const uploadMatch=rawNotes.match(/\[\[EXPHUNGER_LAST_SKU_UPLOAD=([^\]]+)\]\]/);
  const historyMatch=rawNotes.match(/\[\[EXPHUNGER_STOCK_HISTORY=([^\]]+)\]\]/);let stockHistory=[];try{stockHistory=historyMatch?JSON.parse(decodeURIComponent(historyMatch[1])):[]}catch(e){stockHistory=[]}
- const notes=rawNotes.replace(/\n?\[\[EXPHUNGER_FILE_STOCK=[+-]?\d+(?:\.\d+)?\]\]/g,'').replace(/\n?\[\[EXPHUNGER_LAST_SKU_UPLOAD=[^\]]+\]\]/g,'').trim();
+ const notes=cleanProductNotes(rawNotes).replace(/\n?\[\[EXPHUNGER_FILE_STOCK=[+-]?\d+(?:\.\d+)?\]\]/g,'').replace(/\n?\[\[EXPHUNGER_LAST_SKU_UPLOAD=[^\]]+\]\]/g,'').trim();
  return {id:String(r.id),name:r.name||'',image_url:r.image_url||'',barcode:r.barcode||'',sku:r.sku||'',stock:Number(r.stock)||0,minStock:Number(r.min_stock)||0,expiry:r.expiry||'',batch:r.batch||'',notes,createdAt:r.created_at||r.updated_at||new Date().toISOString(),lastFileStockValue:match?Number(match[1]):null,lastSkuUploadAt:uploadMatch?uploadMatch[1]:null,stockHistory:Array.isArray(stockHistory)?stockHistory:[]}
 }
 async function fetchCloudProducts(){
