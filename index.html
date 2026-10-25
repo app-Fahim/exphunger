@@ -928,7 +928,21 @@ async function syncProducts(){
    syncRequested=false;
    const accountId=cloudSession.user.id;
    const rows=products.map(p=>toCloud(p,accountId));
-   for(let i=0;i<rows.length;i+=250){const {error}=await cloudClient.from('products').upsert(rows.slice(i,i+250),{onConflict:'owner_id,id'});if(error)throw error;}
+   // Keep requests small to avoid Supabase statement timeouts on large imports.
+   let batchSize=50;
+   for(let i=0;i<rows.length;){
+    const batch=rows.slice(i,i+batchSize);
+    const {error}=await cloudClient.from('products').upsert(batch,{onConflict:'owner_id,id'});
+    if(error){
+     const message=String(error.message||error.details||'');
+     if(batchSize>10&&/statement timeout|canceling statement|timeout/i.test(message)){
+      batchSize=Math.max(10,Math.floor(batchSize/2));
+      continue; // Retry the same rows in smaller chunks.
+     }
+     throw error;
+    }
+    i+=batch.length;
+   }
   }while(syncRequested && cloudClient && cloudSession && !cloudClearing);
   setCloudStatus('Connected · last sync '+new Date().toLocaleTimeString());
  }finally{cloudBusy=false;}
