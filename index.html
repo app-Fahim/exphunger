@@ -389,11 +389,13 @@ function renderDashboardInsights(){
 }
 function cleanProductNotes(value){
  let s=String(value||'');
- // Remove internal cloud metadata markers that must never be shown as product notes.
- s=s.replace(/\[\[EXPHUNGER_(?:FILE_STOCK=[+-]?\d+(?:\.\d+)?|LAST_SKU_UPLOAD=[^\]]+|STOCK_HISTORY=[^\]]+)\]\]/g,'');
- // Remove legacy spreadsheet-source text, including repeated copies and arbitrary sheet names.
- s=s.replace(/(?:\s*[|·]\s*)?Imported file data\s*[—-]\s*Source sheet\s*:\s*[^|·\n]*(?:\s*[|·]\s*)?/gi,' ');
- s=s.replace(/(?:\s*[|·]\s*)?Imported file data(?:\s*(?:—|-|:)\s*[^|·\n]*)?/gi,' ');
+ // Remove legacy spreadsheet-import annotations, including repeated copies.
+ s=s.replace(/(?:^|\s*[|·]\s*)Imported file data[\s\S]*$/i,'');
+ s=s.replace(/(?:^|\s*[|·]\s*)Source sheet\s*:\s*[^|·\n]*/gi,'');
+ // Remove internal stock/upload/history markers, including HTML-escaped or backslash-escaped brackets.
+ s=s.replace(/(?:&#91;|&#x5b;|\\?\[){2}\s*EXPHUNGER\\?_(?:FILE_STOCK|LAST_SKU_UPLOAD|STOCK_HISTORY)[\s\S]*$/gi,'');
+ s=s.replace(/EXPHUNGER\\?_STOCK_HISTORY[\s\S]*$/gi,'');
+ s=s.replace(/(?:&#93;|&#x5d;|\\?\]){2}/gi,'');
  return s.replace(/^[\s|·]+|[\s|·]+$/g,'').replace(/\s*[|·]\s*[|·]\s*/g,' · ').trim();
 }
 function render(){
