@@ -388,10 +388,13 @@ function renderDashboardInsights(){
  else duplicates.slice(0,12).forEach(group=>{const row=document.createElement('article');row.className='product';const title=document.createElement('div');title.className='pname';title.textContent=group.items[0].name+' · '+group.items.length+' records';const meta=document.createElement('div');meta.className='meta';meta.textContent=group.key.startsWith('barcode:')?'Matching barcode: '+group.key.slice(8):group.key.startsWith('sku:')?'Matching SKU: '+group.key.slice(4):'Matching product name (no barcode/SKU): '+group.key.slice(5);row.append(title,meta);dupRoot.append(row)});
 }
 function cleanProductNotes(value){
- const s=String(value||'');
- return s.replace(/(?:^|\\s*[|·]\\s*)Imported file data(?:\\s*[-—:]\\s*|\\s*)[\\s\\S]*$/i,'')
-         .replace(/(?:^|\\s*[|·]\\s*)Source sheet\\s*:\s*sheet\\d+\\s*$/i,'')
-         .trim();
+ let s=String(value||'');
+ // Remove internal cloud metadata markers that must never be shown as product notes.
+ s=s.replace(/\[\[EXPHUNGER_(?:FILE_STOCK=[+-]?\d+(?:\.\d+)?|LAST_SKU_UPLOAD=[^\]]+|STOCK_HISTORY=[^\]]+)\]\]/g,'');
+ // Remove legacy spreadsheet-source text, including repeated copies and arbitrary sheet names.
+ s=s.replace(/(?:\s*[|·]\s*)?Imported file data\s*[—-]\s*Source sheet\s*:\s*[^|·\n]*(?:\s*[|·]\s*)?/gi,' ');
+ s=s.replace(/(?:\s*[|·]\s*)?Imported file data(?:\s*[—-:]\s*[^|·\n]*)?/gi,' ');
+ return s.replace(/^[\s|·]+|[\s|·]+$/g,'').replace(/\s*[|·]\s*[|·]\s*/g,' · ').trim();
 }
 function render(){
  const count=s=>products.filter(p=>status(p)===s).length;
@@ -1126,7 +1129,7 @@ function fromCloud(r){
  const match=rawNotes.match(/\[\[EXPHUNGER_FILE_STOCK=([+-]?\d+(?:\.\d+)?)\]\]/);
  const uploadMatch=rawNotes.match(/\[\[EXPHUNGER_LAST_SKU_UPLOAD=([^\]]+)\]\]/);
  const historyMatch=rawNotes.match(/\[\[EXPHUNGER_STOCK_HISTORY=([^\]]+)\]\]/);let stockHistory=[];try{stockHistory=historyMatch?JSON.parse(decodeURIComponent(historyMatch[1])):[]}catch(e){stockHistory=[]}
- const notes=cleanProductNotes(rawNotes).replace(/\n?\[\[EXPHUNGER_FILE_STOCK=[+-]?\d+(?:\.\d+)?\]\]/g,'').replace(/\n?\[\[EXPHUNGER_LAST_SKU_UPLOAD=[^\]]+\]\]/g,'').trim();
+ const notes=cleanProductNotes(rawNotes);
  return {id:String(r.id),name:r.name||'',image_url:r.image_url||'',barcode:r.barcode||'',sku:r.sku||'',stock:Number(r.stock)||0,minStock:Number(r.min_stock)||0,expiry:r.expiry||'',batch:r.batch||'',notes,createdAt:r.created_at||r.updated_at||new Date().toISOString(),lastFileStockValue:match?Number(match[1]):null,lastSkuUploadAt:uploadMatch?uploadMatch[1]:null,stockHistory:Array.isArray(stockHistory)?stockHistory:[]}
 }
 async function fetchCloudProducts(){
