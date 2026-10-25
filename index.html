@@ -419,7 +419,7 @@ $('productForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const data={name:$('name').value.trim(),barcode:$('barcode').value.trim(),sku:$('sku').value.trim(),stock:Math.max(0,parseInt($('stock').value||0,10)),minStock:Math.max(0,parseInt($('minStock').value||0,10)),expiry:$('expiry').value,batch:$('batch').value.trim(),notes:$('notes').value.trim()};
  if(!data.name){toast('Enter product name');return}
- const saveBtn=$('saveBtn'), oldText=saveBtn.textContent;
+ const saveBtn=$('saveBtn'), oldText=saveBtn.textContent, wasEditing=!!editingId;
  saveBtn.disabled=true;
  try{
   let candidate;
@@ -451,12 +451,12 @@ $('productForm').addEventListener('submit',async e=>{
   else products.push(candidate);
   safeCacheProducts();render();resetForm();
   if(cloudClient&&cloudSession)setCloudStatus('Connected · product saved to Supabase at '+new Date().toLocaleTimeString());
-  toast(editingId?'Product updated in cloud.':'New product saved'+(cloudClient&&cloudSession?' to cloud.':'.'));
+  toast(wasEditing?'Product updated'+(cloudClient&&cloudSession?' in cloud.':'.'):'New product saved'+(cloudClient&&cloudSession?' to cloud.':'.'));
  }catch(err){
   console.error(err);
   toast(err.message||'Product could not be saved.');
   setCloudStatus('Product save failed: '+(err.message||'check connection and Supabase policies'));
- }finally{saveBtn.disabled=false;saveBtn.textContent=editingId?'Save Changes':oldText;}
+ }finally{saveBtn.disabled=false;saveBtn.textContent=wasEditing?'Save Changes':oldText;}
 });
 $('cancelEdit').onclick=()=>{const wasEditing=!!editingId;resetForm();if(wasEditing){closeNavPage();openNavPage('Products',[$('findPanel'),document.querySelector('.section-title'),$('productList')],'navProducts')}};
 function changeStock(id,delta){const p=products.find(x=>x.id===id);if(!p)return;const v=Number(p.stock)||0;if(delta<0&&v<=0){toast('Stock is already 0');return}p.stock=Math.max(0,v+delta);persist();render();toast('Stock updated')}
