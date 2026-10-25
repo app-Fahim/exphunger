@@ -947,15 +947,14 @@ function dedupeCloudProducts(list){
  // Older imports/syncs may have left multiple cloud rows for the same SKU.
  // Prefer barcode/SKU as identity; use normalized name only when both rows lack codes.
  const result=[],byBarcode=new Map(),bySku=new Map(),nameOnly=new Map();
- const normName=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/[\\u200B-\\u200D\\uFEFF]/g,'').replace(/[^\\p{L}\\p{N}]+/gu,' ').trim().replace(/\\s+/g,' ');
+ const normName=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
  for(const raw of list){
   const p={...raw,id:String(raw.id)};
-  const b=String(p.barcode||'').trim().replace(/\\s+/g,'');
-  const k=String(p.sku||'').trim().toLowerCase().replace(/\\s+/g,'');
+  const b=String(p.barcode||'').trim().replace(/\s+/g,'');
+  const k=String(p.sku||'').trim().toLowerCase().replace(/\s+/g,'');
   const n=normName(p.name);
   let prior=(b&&byBarcode.get(b))||(k&&bySku.get(k))||((!b&&!k&&n)?nameOnly.get(n):null);
   if(prior){
-   // Keep the existing product identity; fill blanks with information from the duplicate.
    for(const field of ['barcode','sku','image_url','expiry','batch','notes'])if(!prior[field]&&p[field])prior[field]=p[field];
    if((Number(p.stock)||0)>(Number(prior.stock)||0))prior.stock=Number(p.stock)||0;
    if((Number(p.minStock)||0)>(Number(prior.minStock)||0))prior.minStock=Number(p.minStock)||0;
