@@ -943,6 +943,32 @@ async function deleteCloudProduct(id){if(!cloudClient||!cloudSession)throw new E
   setCloudStatus('Connected · deletion verified in cloud.');
  }finally{cloudBusy=false;}
 }
+function dedupeCloudProducts(list){
+ // Older imports/syncs may have left multiple cloud rows for the same SKU.
+ // Prefer barcode/SKU as identity; use normalized name only when both rows lack codes.
+ const result=[],byBarcode=new Map(),bySku=new Map(),nameOnly=new Map();
+ const normName=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/[\\u200B-\\u200D\\uFEFF]/g,'').replace(/[^\\p{L}\\p{N}]+/gu,' ').trim().replace(/\\s+/g,' ');
+ for(const raw of list){
+  const p={...raw,id:String(raw.id)};
+  const b=String(p.barcode||'').trim().replace(/\\s+/g,'');
+  const k=String(p.sku||'').trim().toLowerCase().replace(/\\s+/g,'');
+  const n=normName(p.name);
+  let prior=(b&&byBarcode.get(b))||(k&&bySku.get(k))||((!b&&!k&&n)?nameOnly.get(n):null);
+  if(prior){
+   // Keep the existing product identity; fill blanks with information from the duplicate.
+   for(const field of ['barcode','sku','image_url','expiry','batch','notes'])if(!prior[field]&&p[field])prior[field]=p[field];
+   if((Number(p.stock)||0)>(Number(prior.stock)||0))prior.stock=Number(p.stock)||0;
+   if((Number(p.minStock)||0)>(Number(prior.minStock)||0))prior.minStock=Number(p.minStock)||0;
+   if(p.lastFileStockValue<0)prior.lastFileStockValue=p.lastFileStockValue;
+   continue;
+  }
+  result.push(p);
+  if(b)byBarcode.set(b,p);
+  if(k)bySku.set(k,p);
+  if(!b&&!k&&n)nameOnly.set(n,p);
+ }
+ return result;
+}
 async function restoreCloudSafely(){
  // Supabase is the source of truth after login. Never upload stale local-cache rows
  // automatically: a product deleted in the cloud could otherwise be recreated on refresh.
@@ -950,10 +976,11 @@ async function restoreCloudSafely(){
  const accountId=cloudSession.user.id;
  switchUserStorage(accountId);
  const remoteRows=await fetchCloudProducts();
- products=remoteRows.map(row=>fromCloud(row));
+ const rawCount=remoteRows.length;
+ products=dedupeCloudProducts(remoteRows.map(row=>fromCloud(row)));
  safeCacheProducts();
  render();
- setCloudStatus(`Connected · ${products.length} product(s) loaded from this account's cloud data.`);
+ setCloudStatus(`Connected · ${products.length} unique product(s) loaded from cloud${rawCount>products.length?'; hid '+(rawCount-products.length)+' duplicate row(s)':''}.`);
 }
 
 async function updateAuthUI(){
