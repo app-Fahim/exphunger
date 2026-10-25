@@ -353,7 +353,7 @@ function render(){
  if(expiresWithinMonth){const mp=document.createElement('span');mp.className='pill expiring-month-pill';mp.textContent='⚠ Expires within 30 days';tags.append(mp)}
  const exp=document.createElement('div');exp.className='meta'+(expiresWithinMonth?' expiry-month-text':'');exp.style.marginTop='8px';exp.textContent='📅 '+dateLabel(p);left.append(tags,exp);
  if(p.batch||p.notes){const nt=document.createElement('div');nt.className='meta';nt.textContent=[p.batch?'Batch: '+p.batch:'',p.notes].filter(Boolean).join(' · ');left.append(nt)}
- const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);if(Number.isFinite(Number(p.lastFileStockValue))&&Number(p.lastFileStockValue)!==0){const delta=Number(p.lastFileStockValue);const adj=document.createElement('small');adj.textContent=(delta>0?'+':'')+delta+' from file';adj.title='Latest stock adjustment from the uploaded SKU file';adj.style.cssText='display:block;font-size:10px;color:'+(delta>0?'#16a34a':'#f59e0b')+';margin-top:3px;white-space:nowrap';qty.append(adj);}
+ const qty=document.createElement('div');qty.className='qty';const strong=document.createElement('strong');strong.textContent=Number(p.stock)||0;const sm=document.createElement('small');sm.textContent='Packets';qty.append(strong,sm);if(p.lastFileStockValue!==null&&p.lastFileStockValue!==undefined&&p.lastFileStockValue!==''&&Number.isFinite(Number(p.lastFileStockValue))&&Number(p.lastFileStockValue)!==0){const delta=Number(p.lastFileStockValue);const adj=document.createElement('small');adj.textContent=(delta>0?'+':'')+delta+' from file';adj.title='Latest stock adjustment from the uploaded SKU file';adj.style.cssText='display:block;font-size:10px;color:'+(delta>0?'#16a34a':'#f59e0b')+';margin-top:3px;white-space:nowrap';qty.append(adj);}if(Number.isFinite(Number(p.lastFileStockValue))&&Number(p.lastFileStockValue)!==0){const delta=Number(p.lastFileStockValue);const adj=document.createElement('small');adj.textContent=(delta>0?'+':'')+delta+' from file';adj.title='Latest stock adjustment from the uploaded SKU file';adj.style.cssText='display:block;font-size:10px;color:'+(delta>0?'#16a34a':'#f59e0b')+';margin-top:3px;white-space:nowrap';qty.append(adj);}
  const actions=document.createElement('div');actions.className='actions';
  // One-tap product selection from Products list adds/removes it from the persistent Pick List.
  const pickBtn=document.createElement('button');
@@ -1034,7 +1034,7 @@ function dedupeCloudProducts(list){
    for(const field of ['barcode','sku','image_url','expiry','batch','notes'])if(!prior[field]&&p[field])prior[field]=p[field];
    if((Number(p.stock)||0)>(Number(prior.stock)||0))prior.stock=Number(p.stock)||0;
    if((Number(p.minStock)||0)>(Number(prior.minStock)||0))prior.minStock=Number(p.minStock)||0;
-   if(p.lastFileStockValue<0)prior.lastFileStockValue=p.lastFileStockValue;
+   if(Number.isFinite(Number(p.lastFileStockValue))&&Number(p.lastFileStockValue)!==0)prior.lastFileStockValue=p.lastFileStockValue;
    continue;
   }
   result.push(p);
