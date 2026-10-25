@@ -191,7 +191,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
   <section class="auth-card">
     <div style="font-size:38px">🔐</div>
     <h2>Log In</h2>
-    <div class="field"><label for="cloudEmail">Username</label><input class="input" id="cloudEmail" type="text" autocomplete="username" placeholder="Enter username or email"></div>
+    <div class="field"><label for="cloudEmail">Username / Email</label><input class="input" id="cloudEmail" type="email" autocomplete="username" placeholder="Enter your Supabase account email"></div>
     <div class="field"><label for="cloudPassword">Password</label><input class="input" id="cloudPassword" type="password" autocomplete="current-password" placeholder="Enter password"></div>
     <div class="auth-buttons"><button id="cloudLogin" type="button">Log In</button></div>
     <p id="cloudStatus" class="notice" role="status"></p>
@@ -1113,7 +1113,7 @@ $('saveCloudConfig').onclick=()=>{
 $('cloudLogin').onclick=async()=>{
  const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
  if(!initCloudClient()){setCloudStatus('Supabase library/config could not start. Check internet, Project URL and Publishable/anon key.');return;}
- if(!email||!password){setCloudStatus('Enter your username (Supabase account email) and password.');return;}
+ if(!email||!password){setCloudStatus('Enter the email address registered in Supabase and its password. A separate username is not supported yet.');return;}
  const btn=$('cloudLogin');btn.disabled=true;setCloudStatus('Logging in…');
  try{
   const {data,error}=await cloudClient.auth.signInWithPassword({email,password});if(error)throw error;
@@ -1125,7 +1125,7 @@ $('cloudLogin').onclick=async()=>{
   setCloudStatus('Login successful. Loading cloud products…');
   try{await restoreCloudSafely();toast('Login successful.');}
   catch(syncError){console.error(syncError);setCloudStatus('Login successful, but cloud sync failed: '+(syncError.message||'check products table and RLS policies')+'. Local data is preserved.');toast('Logged in; cloud sync needs setup.');}
- }catch(e){console.error(e);setCloudStatus('Login failed: '+(e.message||'check email, password, Project URL and Publishable/anon key')+'.');}
+ }catch(e){console.error(e);setCloudStatus('Login failed: '+(e.message||'check the Supabase account email, password, Project URL and Publishable/anon key')+'. If you entered a username instead of an email, use the account email.');}
  finally{btn.disabled=false;}
 };
 $('navAdmin').onclick=async()=>{
