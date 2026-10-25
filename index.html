@@ -269,7 +269,7 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
  <h3>📄 Upload SKU File</h3>
  <p class="notice">Upload an Excel (.xlsx, .xls) or CSV file. All worksheets and non-empty rows are processed. Product Name is detected automatically where possible; other columns are preserved in Notes. SKU, Barcode and Stock are optional. If Stock is missing, existing stock is kept.</p>
  <div class="form-actions" style="margin:10px 0"><button type="button" class="btn-secondary" id="skuSampleDownloadBtn">⬇️ Download Sample Excel</button><button type="button" class="btn-secondary" id="skuSampleCsvBtn">⬇️ Download Sample CSV</button></div>
- <div class="notice">Recommended columns: Product Name, SKU, Barcode, Stock, Minimum Stock, Expiry Date, Batch, Notes. Only Product Name is required; other columns are optional. Use one product per row and keep the first row as the column headings. You can add your own columns too; their values are saved in Notes. Sample files below show the expected format.</div>
+ <div class="notice">Recommended columns: Product Name, SKU, Barcode, Stock, Expire. Only Product Name is required; other columns are optional. Use one product per row and keep the first row as the column headings. You can add your own columns too; their values are saved in Notes. Sample files below show the expected format.</div>
  <div class="field"><label for="skuImportFile">Choose SKU / product file</label><input class="input" id="skuImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></div>
  <div class="form-actions" style="margin-top:10px"><button type="button" id="skuImportBtn">Upload & Import SKU File</button><button type="button" class="btn-secondary" id="skuImportClearBtn">Clear File</button></div>
  <div class="notice" id="skuImportStatus" style="margin-top:10px">No file selected.</div>
@@ -495,10 +495,10 @@ function downloadSkuSample(filename,rows,mime){
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 const skuSampleRows=[
- ['Product Name','SKU','Barcode','Stock','Minimum Stock','Expiry Date','Batch','Notes'],
- ['Fresh Milk 1L','SKU-1001','6281000000012',24,5,'2026-12-31','BATCH-A01','Keep refrigerated'],
- ['Biscuits 200g','SKU-1002','6281000000029',50,10,'2027-03-15','BATCH-B02','Shelf A3'],
- ['Frozen Peas 500g','SKU-1003','6281000000036',12,3,'2027-01-20','BATCH-C03','Frozen section']
+ ['Product Name','SKU','Barcode','Stock','Expire'],
+ ['Fresh Milk 1L','SKU-1001','6281000000012',24,'2026-12-31'],
+ ['Biscuits 200g','SKU-1002','6281000000029',50,'2027-03-15'],
+ ['Frozen Peas 500g','SKU-1003','6281000000036',12,'2027-01-20']
 ];
 $('skuSampleDownloadBtn').addEventListener('click',()=>{
  // Produce a real .xlsx workbook when the spreadsheet library is available; otherwise
