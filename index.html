@@ -393,7 +393,7 @@ function cleanProductNotes(value){
  s=s.replace(/\[\[EXPHUNGER_(?:FILE_STOCK=[+-]?\d+(?:\.\d+)?|LAST_SKU_UPLOAD=[^\]]+|STOCK_HISTORY=[^\]]+)\]\]/g,'');
  // Remove legacy spreadsheet-source text, including repeated copies and arbitrary sheet names.
  s=s.replace(/(?:\s*[|·]\s*)?Imported file data\s*[—-]\s*Source sheet\s*:\s*[^|·\n]*(?:\s*[|·]\s*)?/gi,' ');
- s=s.replace(/(?:\s*[|·]\s*)?Imported file data(?:\s*[—-:]\s*[^|·\n]*)?/gi,' ');
+ s=s.replace(/(?:\s*[|·]\s*)?Imported file data(?:\s*(?:—|-|:)\s*[^|·\n]*)?/gi,' ');
  return s.replace(/^[\s|·]+|[\s|·]+$/g,'').replace(/\s*[|·]\s*[|·]\s*/g,' · ').trim();
 }
 function render(){
