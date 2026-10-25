@@ -236,6 +236,16 @@ body.light-theme #pickListSelectedResults .btn-secondary { color:#203a54 !import
 <div class="stat s-red"><div class="label">🚨 Expired</div><strong id="expiredCount">0</strong><small>Expired</small></div>
 <div class="stat s-slate"><div class="label">✖ Out of Stock</div><strong id="outCount">0</strong><small>Zero stock</small></div>
 </div>
+<div class="panel" id="dashboardInsights">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2 style="margin:0">📊 Stock Health Dashboard</h2><span id="dashboardSyncStatus" class="pill near">Cloud status: checking…</span></div>
+ <p class="notice">Live summary based on the products currently loaded in this account.</p>
+ <div id="dashboardChart" style="display:grid;gap:10px;margin:14px 0"></div>
+ <div class="formgrid">
+  <div class="panel" style="margin:0;padding:12px"><h3>⚠️ Low Stock Alert <span id="lowStockCount">0</span></h3><div id="lowStockList" class="product-list"></div></div>
+  <div class="panel" style="margin:0;padding:12px"><h3>🧩 Possible Duplicate Products <span id="duplicateCount">0</span></h3><p class="notice">Suggestions only. Nothing is automatically deleted or merged.</p><div id="duplicateList" class="product-list"></div></div>
+ </div>
+ <div class="form-actions" style="margin-top:12px"><button type="button" class="btn-secondary" id="downloadDashboardBackup">⬇️ Download Current Data Backup</button><button type="button" class="btn-secondary" id="refreshDashboardStatus">↻ Refresh Cloud Status</button></div>
+</div>
 
 <div class="panel" id="findPanel">
 <h2>🔎 Find Products</h2>
@@ -339,12 +349,49 @@ function status(p){if(Number(p.stock)<=0)return'out';const d=daysTo(p.expiry);if
 function statusLabel(s){return({ok:'In Stock',near:'Near Expiry',expired:'Expired',out:'Out of Stock'})[s]}
 function dateLabel(p){if(!p.expiry)return'Date not set';const d=daysTo(p.expiry);if(d<0)return`${p.expiry} · ${Math.abs(d)} days past expiry`;if(d===0)return`${p.expiry} · expires today`;return`${p.expiry} · ${d} days remaining`}
 function toast(msg){const old=document.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)}
+function normalizeDuplicateKey(value){return String(value||'').normalize('NFKC').toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu,' ').trim()}
+function findPossibleDuplicates(){
+ const groups=new Map();
+ products.forEach(p=>{
+  const barcode=String(p.barcode||'').trim().toLowerCase().replace(/\\s+/g,'');
+  const sku=String(p.sku||'').trim().toLowerCase().replace(/\\s+/g,'');
+  const name=normalizeDuplicateKey(p.name);
+  const key=barcode?'barcode:'+barcode:sku?'sku:'+sku:(!barcode&&!sku&&name?'name:'+name:'');
+  if(!key)return;
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(p);
+ });
+ return [...groups.entries()].filter(([,items])=>items.length>1).map(([key,items])=>({key,items}));
+}
+function renderDashboardInsights(){
+ const chart=$('dashboardChart'),lowRoot=$('lowStockList'),dupRoot=$('duplicateList');
+ if(!chart||!lowRoot||!dupRoot)return;
+ const low=products.filter(p=>Number(p.stock)>0&&Number(p.minStock)>0&&Number(p.stock)<=Number(p.minStock)).sort((a,b)=>Number(a.stock)-Number(b.stock));
+ const out=products.filter(p=>Number(p.stock)<=0).length,expired=products.filter(p=>daysTo(p.expiry)!==null&&daysTo(p.expiry)<0).length;
+ const near=products.filter(p=>{const d=daysTo(p.expiry);return d!==null&&d>=0&&d<=30}).length;
+ const values=[['In stock',products.filter(p=>Number(p.stock)>0&&status(p)==='ok').length,'#22c55e'],['Low stock',low.length,'#f59e0b'],['Near expiry',near,'#eab308'],['Expired',expired,'#ef4444'],['Out of stock',out,'#94a3b8']];
+ const max=Math.max(1,...values.map(v=>v[1]));chart.innerHTML='';
+ values.forEach(([label,value,color])=>{
+  const row=document.createElement('div');row.style.cssText='display:grid;grid-template-columns:105px minmax(30px,1fr) 54px;align-items:center;gap:9px';
+  const name=document.createElement('span');name.textContent=label;name.style.fontSize='13px';
+  const track=document.createElement('div');track.style.cssText='height:12px;background:var(--card2,#18334d);border-radius:99px;overflow:hidden';
+  const bar=document.createElement('div');bar.style.cssText='height:100%;width:'+Math.max(value?2:0,value/max*100)+'%;background:'+color+';border-radius:99px';track.append(bar);
+  const number=document.createElement('strong');number.textContent=Number(value).toLocaleString();number.style.textAlign='right';
+  row.append(name,track,number);chart.append(row);
+ });
+ $('lowStockCount').textContent=low.length.toLocaleString();lowRoot.innerHTML='';
+ if(!low.length)lowRoot.innerHTML='<div class="empty">No products are currently below their minimum stock level.</div>';
+ else low.slice(0,12).forEach(p=>{const row=document.createElement('article');row.className='product';const title=document.createElement('div');title.className='pname';title.textContent=p.name;const meta=document.createElement('div');meta.className='meta';meta.textContent='Stock: '+Number(p.stock||0).toLocaleString()+' · Minimum: '+Number(p.minStock||0).toLocaleString()+(p.sku?' · SKU: '+p.sku:'');row.append(title,meta);lowRoot.append(row)});
+ const duplicates=findPossibleDuplicates();$('duplicateCount').textContent=duplicates.length.toLocaleString();dupRoot.innerHTML='';
+ if(!duplicates.length)dupRoot.innerHTML='<div class="empty">No possible duplicates detected from barcode, SKU, or exact product name.</div>';
+ else duplicates.slice(0,12).forEach(group=>{const row=document.createElement('article');row.className='product';const title=document.createElement('div');title.className='pname';title.textContent=group.items[0].name+' · '+group.items.length+' records';const meta=document.createElement('div');meta.className='meta';meta.textContent=group.key.startsWith('barcode:')?'Matching barcode: '+group.key.slice(8):group.key.startsWith('sku:')?'Matching SKU: '+group.key.slice(4):'Matching product name (no barcode/SKU): '+group.key.slice(5);row.append(title,meta);dupRoot.append(row)});
+}
 function render(){
  const count=s=>products.filter(p=>status(p)===s).length;
  $('totalProducts').textContent=products.length;
  const uploadReport=$('lastSkuUploadReport');if(uploadReport){const latest=products.reduce((best,p)=>{const t=p.lastSkuUploadAt||'';return t>best?t:best;},'');if(latest){const latestCount=products.filter(p=>p.lastSkuUploadAt===latest).length;const latestDate=new Date(latest);uploadReport.textContent='Last SKU file upload: '+new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Riyadh'}).format(latestDate)+' (Saudi Arabia time) · '+latestCount.toLocaleString()+' product(s) processed.';}else{uploadReport.textContent='Last SKU file upload: No successful upload recorded yet.';}}
  $('totalStock').textContent=products.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0),0).toLocaleString();
- $('nearCount').textContent=count('near');$('expiredCount').textContent=count('expired');$('outCount').textContent=count('out');updateSmartExpiryAlert();
+ $('nearCount').textContent=count('near');$('expiredCount').textContent=count('expired');$('outCount').textContent=count('out');updateSmartExpiryAlert();renderDashboardInsights();
  const q=$('search').value.trim().toLowerCase(),sf=$('statusFilter').value,sort=$('sortFilter').value;
  let list=products.filter(p=>[p.name,p.barcode,p.sku,p.batch,p.notes].join(' ').toLowerCase().includes(q)).filter(p=>sf==='all'||status(p)===sf);
  list.sort((a,b)=>sort==='stock'?(Number(b.stock)-Number(a.stock)):sort==='expiry'?((a.expiry||'9999').localeCompare(b.expiry||'9999')):a.name.localeCompare(b.name));
@@ -727,6 +774,9 @@ async function removeProduct(id){const p=products.find(x=>x.id===id);if(!p)retur
 $('search').oninput=()=>{if(!$('navPage').classList.contains('hidden')&&$('productList').isConnected)render()};function runHomeProductSearch(){if($('navPage').classList.contains('hidden'))openNavPage('Products',[$('findPanel'),document.querySelector('.section-title'),$('productList')],'navProducts');render();$('navPage').scrollTop=0;setTimeout(()=>{const list=$('productList');if(list)list.scrollIntoView({behavior:'smooth',block:'start'})},60)}$('searchBtn').onclick=runHomeProductSearch;$('search').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runHomeProductSearch()}};$('statusFilter').onchange=render;$('sortFilter').onchange=render;$('clearSearch').onclick=()=>{$('search').value='';render();$('search').focus()};
 $('exportBtn').onclick=()=>{const rows=[['Product Name','Barcode','SKU','Stock (Packets)','Minimum Stock','Expiry Date','Status','Batch','Notes'],...products.map(p=>[p.name,p.barcode,p.sku,p.stock,p.minStock,p.expiry,statusLabel(status(p)),p.batch,p.notes])];const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download='all-items-stock-expiry.csv';a.click();URL.revokeObjectURL(a.href);toast('CSV report downloaded')};
 $('backupBtn').onclick=()=>download('all-items-tracker-backup.json',JSON.stringify({version:1,exportedAt:new Date().toISOString(),products},null,2),'application/json');
+ $('downloadDashboardBackup')?.addEventListener('click',()=>{download('all-items-tracker-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({version:2,exportedAt:new Date().toISOString(),accountId:cloudSession?.user?.id||null,products},null,2),'application/json');toast('Current product backup downloaded.');});
+ $('refreshDashboardStatus')?.addEventListener('click',async()=>{if(!cloudClient||!cloudSession){setCloudStatus('Not connected to cloud. Log in to sync.');return;}setCloudStatus('Checking cloud connection…');try{const {error}=await cloudClient.from('products').select('id',{count:'exact',head:true}).eq('owner_id',cloudSession.user.id);if(error)throw error;setCloudStatus('Connected · cloud product count query succeeded.');}catch(e){setCloudStatus('Cloud status check failed: '+(e.message||'check connection'));}});
+
 function download(name,data,type){const a=document.createElement('a');const url=URL.createObjectURL(new Blob([data],{type}));a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function csvDownload(name,rows){const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download(name,csv,'text/csv;charset=utf-8;')}
 $('managerReportBtn')?.addEventListener('click',()=>{const rows=[['Manager Stock & Expiry Report','Generated',new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'})],[],['Product Name','Barcode','SKU','Stock','Minimum Stock','Expiry Date','Status','Batch','Notes'],...products.map(p=>[p.name,p.barcode,p.sku,p.stock,p.minStock,p.expiry,statusLabel(status(p)),p.batch,p.notes])];csvDownload('manager-stock-expiry-'+new Date().toISOString().slice(0,10)+'.csv',rows);toast('Manager report downloaded')});
@@ -1047,7 +1097,7 @@ const CONFIG_KEY='allItemsSupabaseConfig.v1';
 // Public client configuration is bundled so every device can use the same hosted app without re-entering URL/key.
 const DEFAULT_CLOUD_CONFIG={url:'https://xjspawizazyabdxttcay.supabase.co',key:'sb_publishable__kn5gfUctxW5AhqzUDOkxA_XTQZdARN'};
 let cloudClient=null, cloudSession=null, cloudBusy=false, cloudClearing=false, adminPanelOpen=false;
-function setCloudStatus(message){const el=$('cloudStatus');if(el)el.textContent=message;}
+function setCloudStatus(message){const el=$('cloudStatus');if(el)el.textContent=message;const badge=$('dashboardSyncStatus');if(badge){badge.textContent=message||'Cloud status unknown';badge.className='pill '+(/failed|could not|error|not connected|unable/i.test(message||'')?'expired':/connected|saved|loaded|verified/i.test(message||'')?'ok':'near');}}
 function getConfig(){try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null')||DEFAULT_CLOUD_CONFIG}catch{return DEFAULT_CLOUD_CONFIG}}
 function updateConnectionSettingsUI(){const cfg=getConfig();const saved=!!(cfg&&cfg.url&&cfg.key);$('connectionSettings').classList.toggle('hidden',saved);$('changeCloudConfig').classList.toggle('hidden',!saved);if(saved){$('sbUrl').value=cfg.url;$('sbKey').value=cfg.key;}}
 $('changeCloudConfig').onclick=()=>{$('connectionSettings').classList.remove('hidden');$('changeCloudConfig').classList.add('hidden');setCloudStatus('Update the URL/key only if your Supabase project connection has changed.');};
