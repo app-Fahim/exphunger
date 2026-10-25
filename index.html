@@ -643,7 +643,7 @@ $('skuFile').onchange=async e=>{
    if(!existing && name){const named=nameMap.get(normalizeProductName(name));if(named && ((!barcode&&!sku)||(!named.barcode&&!named.sku)))existing=named;}
    if(existing){
     existing.name=name||existing.name;existing.barcode=barcode||existing.barcode||'';existing.sku=sku||existing.sku||'';
-    if(stockRaw!==''&&Number.isFinite(stockNum)){existing.stock=Math.max(0,stockNum);existing.lastFileStockValue=stockNum;}if(minRaw!=='')existing.minStock=minStock;if(expiry)existing.expiry=expiry;if(batch)existing.batch=batch;if(notes)existing.notes=notes;
+    if(stockRaw!==''&&Number.isFinite(stockNum)){const currentStock=Number(existing.stock)||0;existing.stock=Math.max(0,currentStock+stockNum);existing.lastFileStockValue=stockNum;}if(minRaw!=='')existing.minStock=minStock;if(expiry)existing.expiry=expiry;if(batch)existing.batch=batch;if(notes)existing.notes=notes;
     if(existing.barcode)identityMap.set('b:'+String(existing.barcode).trim().replace(/\s+/g,''),existing);
     if(existing.sku)identityMap.set('s:'+String(existing.sku).trim().toLowerCase().replace(/\s+/g,''),existing);
     const nk=normalizeProductName(existing.name);if(nk&&!nameMap.has(nk))nameMap.set(nk,existing);
