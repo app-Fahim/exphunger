@@ -954,11 +954,13 @@ async function restoreCloudSafely(){
  const accountId=cloudSession.user.id;
  switchUserStorage(accountId);
  const remoteRows=await fetchCloudProducts();
- const rawCount=remoteRows.length;
- products=dedupeCloudProducts(remoteRows.map(row=>fromCloud(row)));
+ // Keep the displayed total tied to the exact rows returned by Supabase. The old
+ // client-side dedupe changed the count on every cloud refresh when similar names,
+ // barcodes or SKUs existed, making the total appear to rise and fall.
+ products=remoteRows.map(row=>fromCloud(row));
  safeCacheProducts();
  render();
- setCloudStatus(`Connected · ${products.length} unique product(s) loaded from cloud${rawCount>products.length?'; hid '+(rawCount-products.length)+' duplicate row(s)':''}.`);
+ setCloudStatus(`Connected · ${products.length.toLocaleString()} product record(s) loaded from cloud.`);
 }
 
 async function updateAuthUI(){
